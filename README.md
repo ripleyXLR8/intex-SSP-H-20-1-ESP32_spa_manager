@@ -1,9 +1,8 @@
 # Intex SSP-H-20-1 Arduino Spa Manager
-
-This project aim to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to remote control the spa and integrate it in my domotic system (Jeedom but it should work with other system). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible...
+This project aim to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to remote control the spa and integrate it in my domotic system (Jeedom but it should work with other system since it rely on MQTT protocol). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible...
 
 ## 1) Intex motherboard reverse engineering
-Below the annotate picture of the motherboard and somes remarks about everythings.
+Below the annotate picture of the motherboard with my understanding of its working principle.
 
 ![Motherboard schematic](/images/motherboard_schematic.png)
 
@@ -46,8 +45,24 @@ I did not investigate the control panel operation.
 It seems that this spa is equiped by a magnetic descaling system. Here is the wikipedia page on this technology (https://en.wikipedia.org/wiki/Magnetic_water_treatment). I cannot find the type of signal send to this device, it seems that the signal is AC with a modulation of amplitude. I will investigate it later, for the moment, this function has not been implemented on the replacement board.
 
 ## 2) Designing the replacement board
-### a) Electrical drawing
-### b) Board schematic
+### a) Working principle
+An Arduino Nano is the heart of the system. It allows us to connect : 
+- 2 temperature sensors on 2 analog inputs
+- 2 flow sensors on 2 digital inputs
+- 1 temperature fuse on 1 digital input
+- 5 buttons on 5 digital input (PUMP, HEATING, JET, +, -)
+- 1 LCD display on 2 digital inputs (I2C protocol)
+- 4 relays on a board on 4 digital inputs
+- 1 ESP8266-01 on 2 digital inputs
+
+The relay board, the LCD and the ESP8266 will not be powered from the 5Volt pin of the arduino, we will use a 5VDC power supply to power them directly.
+
+### b) Electrical drawing
+I used Eagle 8.2.2 to design the replacement board, below is the electrical drawing. The eagle files will be available soon.
+
+![Electrical schematic](/images/electrical_schematic.png)
+
+### c) Board schematic
 I wanted the board to be easily produce at home by anybody so I choose to use a single side PCB with plated-trhough holes (PTH) components. SMD component will be a also good choice, but I know that occasionnal welder are more at ease with PTH components. The drilling size is 0.8mm, the width of the electrical tracks is 16mil (0.40mm) and the clearance is 10mil (0.25mm), theses parameters allows you to produce the board using the toner transfer method (this method requires very few tools). There is only 2 air wires on the current version of the board (you can propose a new version to reduce this number).
 
 I choose to use a pre-build 4 relays board because I had some laying around... but you can integrate relays to the main PCB, it will look more professionnal.
