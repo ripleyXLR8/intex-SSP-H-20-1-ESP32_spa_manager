@@ -9,7 +9,7 @@ Below the annotate picture of the motherboard with my understanding of its worki
 ![Motherboard schematic](/images/motherboard_schematic.png)
 
 ### a) Sensors
-There are 5 sensors connected to the board, 2 temperature sensors, 2 flow sensors and 1 temperature fuse. They are all connected with a kind of JST connector, it looks like a JST XH but the JST XH doesn't have the lock mecanism. For the moment I use a standart 2.54mm male pin header to connect them.
+There are 5 sensors connected to the board, 2 temperature sensors, 2 flow sensors and 1 temperature fuse. They are all connected with a kind of JST connector, it looks like a JST XH but the JST XH doesn't have the lock mecanism. For the moment I use a standart 2.54mm pithc male pin header to connect them.
 
 #### Temperature sensors
 Both temperature sensors are Negative Temperature Coefficient (NTC) thermistore, it means that the resistance of the thermistore decreases with an increase in temperature in a non linear way. I use the code available on this page (http://www.circuitbasics.com/arduino-thermistor-temperature-sensor-tutorial/) to read the temperature from the thermistore. This code is based on the Steinhart-Hart equation and to work at his best, the coeficient of this equation must be adapted to your thermistore. But I did not want to unscrew the thermistore embedded in my spa so I use the standart coeficient of the equation and it works fine with an acceptable accuracy.
