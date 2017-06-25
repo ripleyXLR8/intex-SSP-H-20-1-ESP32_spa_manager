@@ -76,6 +76,10 @@ I choose to use a pre-build 4 relays board because I had some laying around... b
 
 The original motherboard dimension are 10.5cm x 17cm, mounting hole are 5mm wide and are placed 4.5mm from the edge of the board. The PCB will be mounted using the same mounting screw used by the original motherboard (but I don't think I will be using the center plastic lock).
 
+### d) Board production
+
+https://www.reichelt.de/my/1360986
+
 ## 3) Writing the code
 
 ## 4) Upload and first run
