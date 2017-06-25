@@ -1,6 +1,9 @@
 # WORK IN PROGRESS
 
 # Intex SSP-H-20-1 Arduino Spa Manager
+
+**WARNING : The circuit in this project use main voltage (220 VAC in western Europe). This can be deadly if not handled properly! You can easily hurt yourself as well. Build this circuit at your own risk.**
+
 This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to remote control the spa and integrate it in my domotic system (Jeedom but it should work with other system since it rely on MQTT protocol). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible...
 
 ## 1) Intex motherboard reverse engineering
@@ -25,7 +28,9 @@ One temperature fuse is installed just below heating elements. I cannot test the
 Both flow sensors let the current pass only if flow is detected, they ensure that no heating is activated if there is no flow detected in the system.
 
 ### b) Power supply, relays and other stuffs
-All the power cable are connected by screw terminal connection. We will use the same kind of connector on our board.
+All the power cable (Input and outputs) are connected by a barrier terminal block. We will use the same connector on our board because we don't want to alter the power cable and change their connector.
+
+This is one of the most uncommon part of this project, you will find below in the Bill Of Quantities section some link to find it.
 
 #### Heating elements
 There is two heating element in the spa for a total power of 2000Watts. They are directly powered by a relay allowing 220VAC to pass trough the heating element.
@@ -69,7 +74,7 @@ I wanted the board to be easily produce at home by anybody so I choose to use a 
 
 I choose to use a pre-build 4 relays board because I had some laying around... but you can integrate relays to the main PCB, it will look more professionnal.
 
-The original motherboard dimension are 10.5cm x 17cm, mounting hole are 5mm wide and are placed 4.5mm from the edge of the board.
+The original motherboard dimension are 10.5cm x 17cm, mounting hole are 5mm wide and are placed 4.5mm from the edge of the board. The PCB will be mounted using the same mounting screw used by the original motherboard (but I don't think I will be using the center plastic lock).
 
 ## 3) Writing the code
 
