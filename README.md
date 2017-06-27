@@ -4,7 +4,7 @@
 
 **WARNING : The circuit in this project uses main voltage (220-240 Volt AC in western Europe). This can be deadly if not handled properly! You can easily hurt yourself as well. Build this circuit at your own risk.**
 
-This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to remote control the spa and integrate it in my domotic system (I'm using Jeedom https://www.jeedom.com/, an open-source system, but it should work with other system since it rely on MQTT protocol). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible...
+This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to remote control the spa and integrate it in my domotic system (I'm using Jeedom https://www.jeedom.com/, an open-source system, but it should work with other system since it rely on MQTT protocol). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible...
 
 ## 1) Intex motherboard reverse engineering
 Below the annotate picture of the motherboard with my understanding of its working principle.
@@ -46,7 +46,7 @@ The jet pump is directly powered by a relay allowing 220VAC to pass trough the p
 The water pump is powered by 12VAC but before that a relay allows 220VAC to flow through a dual output 12VAC transformer (see the drawing above). One of the output is connected to a relay but activate this relay, the second output of the transformer goes into a full bridge rectifier producing 12VDC and to the relay. The 12VAC is then allowed to flow into the water pump.
 
 #### Control panel
-I did not investigate the control panel operation.
+Since I will not be using the control panel anymore, I did not investigate it.
 
 #### Descaler system
 It seems that this spa is equiped by a magnetic descaling system. Here is the wikipedia page on this technology (https://en.wikipedia.org/wiki/Magnetic_water_treatment). I cannot find the type of signal send to this device, it seems that the signal is AC with a modulation of amplitude. I will investigate it later, for the moment, this function has not been implemented on the replacement board.
@@ -59,10 +59,10 @@ An Arduino Nano is the heart of the system. It allows us to connect :
 - 1 temperature fuse on 1 digital input
 - 5 buttons on 5 digital input (PUMP, HEATING, JET, +, -)
 - 1 LCD display on 2 digital inputs (I2C protocol)
-- 4 relays on a board on 4 digital inputs
+- 4 power relays on 4 digital inputs
 - 1 ESP8266-01 on 2 digital inputs
 
-The relay board, the LCD and the ESP8266 will not be powered from the 5Volt pin of the arduino, we will use a 5VDC power supply to power them directly.
+The relay, the LCD and the ESP8266 will not be powered from the 5 Volt pin of the arduino, we will use directly the 5 Volt DC power supply to power them directly.
 
 ### b) Electrical drawing
 I used Eagle 8.2.2 to design the replacement board, below is the electrical drawing. The eagle files will be available soon.
