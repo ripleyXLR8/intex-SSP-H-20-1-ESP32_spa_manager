@@ -78,17 +78,17 @@ The original motherboard dimension are 10.5cm x 17cm, mounting hole are 5mm wide
 
 The power track width (tracks going to relays) will carry a lot of current. The total power of the Spa is 2200 watts and it is decomposing as follow :
 
-Heater 1 : TO BE MEASURED ON THE WORKING SPA A @ 220 Volt AC -> TO BE CALCULATED
-Heater 2 : TO BE MEASURED ON THE WORKING SPA A @ 220 Volt AC -> TO BE CALCULATED
-Water Pump : TO BE MEASURED ON THE WORKING SPA @ 12 Volt DC -> TO BE CALCULATED
-Air Pump : TO BE MEASURED ON THE WORKING SPA @ 220 Volt AC -> TO BE CALCULATED
+- Heater 1 : TO BE MEASURED ON THE WORKING SPA A @ 220 Volt AC -> TO BE CALCULATED
+- Heater 2 : TO BE MEASURED ON THE WORKING SPA A @ 220 Volt AC -> TO BE CALCULATED
+- Water Pump : TO BE MEASURED ON THE WORKING SPA @ 12 Volt DC -> TO BE CALCULATED
+- Air Pump : TO BE MEASURED ON THE WORKING SPA @ 220 Volt AC -> TO BE CALCULATED
 
 For a 35um copper track PCB, a maximum temperature increase of 20°C and an ambiant temperature of 25°C we have the following width for the power tracks :
 
-Heater 1 : TO BE CALCULATED
-Heater 2 : TO BE CALCULATED
-Water Pump : TO BE CALCULATED
-Air Pump : TO BE CALCULATED
+- Heater 1 : TO BE CALCULATED
+- Heater 2 : TO BE CALCULATED
+- Water Pump : TO BE CALCULATED
+- Air Pump : TO BE CALCULATED
 
 ### d) Board production
 
