@@ -9,15 +9,15 @@
 This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to remote control the spa and integrate it in my domotic system (I'm using Jeedom https://www.jeedom.com/, an open-source system, but it should work with other system since it rely on MQTT protocol). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
 
 ## 1) Intex motherboard reverse engineering
-Below the annotate picture of the motherboard with my understanding of its working principle.
+Below the annotate picture of the motherboard with my understanding of its working principle. Since the card is labeled, everything is pretty straight forward except the descaler system and the over-engineered pump system (the upper terminal barrier connector on the board).
 
 ![Motherboard schematic](/images/motherboard_schematic.png)
 
 ### a) Sensors
-There are 5 sensors connected to the board, 2 temperature sensors, 2 flow sensors and 1 temperature fuse. They are all connected with a kind of JST connector, it looks like a JST XH but the JST XH doesn't have the lock mecanism. ~~For the moment I use a standart 2.54mm pitch male pin header to connect them.~~
+There are 5 sensors connected to the board, 2 temperature sensors, 2 flow sensors and 1 temperature fuse. They are all connected with a kind of 3 pins JST connector, it looks like a JST XH 3P but the JST XH 3P doesn't have the lock mecanism. For the moment I use a standart 2.54mm pitch male pin header to connect them for testing purpose but I will use JST XH 3P on the final device.
 
 #### Temperature sensors
-Both temperature sensors are Negative Temperature Coefficient (NTC) thermistore, it means that the resistance of the thermistore decreases with an increase in temperature in a non linear way. I use the code available on this page (http://www.circuitbasics.com/arduino-thermistor-temperature-sensor-tutorial/) to read the temperature from the thermistore. This code is based on the Steinhart-Hart equation and to work at his best, the coeficient of this equation must be adapted to your thermistore. But I did not want to unscrew the thermistore embedded in my spa so I use the standart coeficient of the equation and it works fine with an acceptable accuracy.
+Both temperature sensors are negative temperature coefficient (NTC) thermistore, it means that the resistance of the thermistore decreases with an increase in temperature in a non linear way. I use the code available on this page (http://www.circuitbasics.com/arduino-thermistor-temperature-sensor-tutorial/) to read the temperature from the thermistore. This code is based on the Steinhart-Hart equation and to work at his best, the coeficient of this equation must be adapted to your thermistore. But I did not want to unscrew the thermistore embedded in my spa so I use the standart coeficient of the equation and it works fine with an acceptable accuracy.
 
 The temperature sensor 1 is installed at the intake of the water pump so it reads the water temperature and it is use to regulate the water temperature from 20°C to 40°C.
 
@@ -30,9 +30,7 @@ One temperature fuse is installed just below heating elements. I cannot test the
 Both flow sensors let the current pass only if flow is detected, they ensure that no heating is activated if there is no flow detected in the system.
 
 ### b) Power supply, relays and other stuffs
-All the power cable (Input and outputs) are connected by a barrier terminal block. We will use the same connector on our board because we don't want to alter the power cable and change their connector.
-
-This is one of the most uncommon part of this project, you will find below in the Bill Of Quantities section some link to find it.
+All the power cable (Input and outputs) are connected by a barrier terminal block. We will use the same connector on our board because we don't want to alter the power cable and change their connector. Please note that this barrier connector is one of the most difficult part to find for this project. I cannot find it on https://www.reichelt.de/ which is my usual parts supplier, but I find on http://www.newark.com/.
 
 #### Heating elements
 There is two heating element in the spa for a total power of 2000Watts. They are directly powered by a relay allowing 220VAC to pass trough the heating element.
@@ -77,6 +75,20 @@ I wanted the board to be easily produce at home by anybody so I choose to use a 
 ~~I choose to use a pre-build 4 relays board because I had some laying around... but you can integrate relays to the main PCB, it will look more professionnal.~~ Relays are integrated on the board to integrate more easily in the original enclosure.
 
 The original motherboard dimension are 10.5cm x 17cm, mounting hole are 5mm wide and are placed 4.5mm from the edge of the board. The PCB will be mounted using the same mounting screw used by the original motherboard (but I don't think I will be using the center plastic lock).
+
+The power track width (tracks going to relays) will carry a lot of current. The total power of the Spa is 2200 watts and it is decomposing as follow :
+
+Heater 1 : TO BE MEASURED ON THE WORKING SPA A @ 220 Volt AC -> TO BE CALCULATED
+Heater 2 : TO BE MEASURED ON THE WORKING SPA A @ 220 Volt AC -> TO BE CALCULATED
+Water Pump : TO BE MEASURED ON THE WORKING SPA @ 12 Volt DC -> TO BE CALCULATED
+Air Pump : TO BE MEASURED ON THE WORKING SPA @ 220 Volt AC -> TO BE CALCULATED
+
+For a 35um copper track PCB, a maximum temperature increase of 20°C and an ambiant temperature of 25°C we have the following width for the power tracks :
+
+Heater 1 : TO BE CALCULATED
+Heater 2 : TO BE CALCULATED
+Water Pump : TO BE CALCULATED
+Air Pump : TO BE CALCULATED
 
 ### d) Board production
 
