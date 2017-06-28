@@ -88,7 +88,7 @@ As we can see, if everything is running at the same time the spa can draw a tota
 - Heater 1 and 2 have a 20 seconds startup delay between each other.
 - Air pump and heater 2 can't run at the same time.
 
-We will implement the same rules to our board so the maximum current draw will be around 8A with a peak around 11A when starting the heater or the pump.
+We will implement the same rules to our board so the maximum current draw will be around 8A with a peak around 11A when starting the heater or the pump. (Which is about what is announced by Intex around 2400 Watts)
 
 For a 35um copper track PCB, a maximum temperature increase of 20°C and an ambiant temperature of 25°C we have the following width for the power tracks :
 
