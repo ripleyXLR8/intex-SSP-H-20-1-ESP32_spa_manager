@@ -76,12 +76,19 @@ I wanted the board to be easily produce at home by anybody so I choose to use a 
 
 The original motherboard dimension are 10.5cm x 17cm, mounting hole are 5mm wide and are placed 4.5mm from the edge of the board. The PCB will be mounted using the same mounting screw used by the original motherboard (but I don't think I will be using the center plastic lock).
 
-The power track width (tracks going to relays) will carry a lot of current. The total power of the Spa is 2200 watts and it is decomposing as follow :
+The power tracks (tracks going to relays) will carry a lot of current. The total power of the Spa announced by Intex is 2200 watts. I have made some measurement on the original board to see how much current is use by each component :
 
-- Heater 1 : TO BE MEASURED ON THE WORKING SPA A @ 220 Volt AC -> TO BE CALCULATED
-- Heater 2 : TO BE MEASURED ON THE WORKING SPA A @ 220 Volt AC -> TO BE CALCULATED
-- Water Pump : TO BE MEASURED ON THE WORKING SPA @ 12 Volt DC -> TO BE CALCULATED
-- Air Pump : TO BE MEASURED ON THE WORKING SPA @ 220 Volt AC -> TO BE CALCULATED
+- Heater 1 : 6.70A (Peak at startup) / 3.70A (Cruise) @ 220 Volt AC
+- Heater 2 : 7.00A (Peak at startup) / 4.00A (Cruise) @ 220 Volt AC
+- Water pump : 0.16A @ 12 Volt AC (This measure include also de descaler) 
+- Air pump : 5.50A (Peak at startup) / 3.60A (Cruise) @ 220 Volt AC
+
+As we can see, if everything is running at the same time the spa can draw a total of 11.46A with a peak at startup of 19,36A which is a lot. In the original board there is some rules to avoid the spa to reach this high current drawing :
+
+- Heater 1 and 2 have a 20 seconds startup delay between each other.
+- Air pump and heater 2 can't run at the same time.
+
+We will implement the same rules to our board so the maximum current draw will be around 8A with a peak around 11A when starting the heater or the pump.
 
 For a 35um copper track PCB, a maximum temperature increase of 20°C and an ambiant temperature of 25°C we have the following width for the power tracks :
 
