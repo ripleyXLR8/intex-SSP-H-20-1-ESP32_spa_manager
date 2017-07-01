@@ -43,13 +43,13 @@ Please note that in normal condition :
 The jet pump is directly powered by a relay allowing 220VAC to pass trough the pump and pumping air into the Spa. (Nothing fancy)
 
 #### Water pump
-The water pump is powered by 12VAC but before that a relay allows 220VAC to flow through a dual output 12VAC transformer (see the drawing above). One of the output is connected to a relay but activate this relay, the second output of the transformer goes into a full bridge rectifier producing 12VDC and to the relay. The 12VAC is then allowed to flow into the water pump.
+The water pump is powered by 12VAC but before that a relay allows 220VAC to flow through a dual output 12VAC transformer (see the drawing above). One of the output is connected to a relay but activate this relay, the second output of the transformer goes into a full bridge rectifier producing 12VDC and to the relay. The 12VAC is then allowed to flow into the water pump. It seems that the only goal of this system is to allow the descaling system to start at the same time as the pump (see below the descaling system). On this version on the board we will not implement the descaling system (maybe on the next version) so we will power the pump directly from the output transformer.
 
 #### Control panel
 Since I will not be using the control panel anymore, I did not investigate it.
 
 #### Descaler system
-It seems that this spa is equiped by a magnetic descaling system. Here is the wikipedia page on this technology (https://en.wikipedia.org/wiki/Magnetic_water_treatment). I cannot find the type of signal send to this device, it seems that the signal is AC with a modulation of amplitude. I will investigate it later, for the moment, this function has not been implemented on the replacement board.
+It seems that this spa is equiped by a magnetic descaling system. Here is the wikipedia page on this technology (https://en.wikipedia.org/wiki/Magnetic_water_treatment). I cannot find the type of signal send to this device, it seems that the signal is AC with a modulation of amplitude. I will investigate it later because for the moment I don't have an oscilloscope so this function has not been implemented on the replacement board.
 
 ## 2) Designing the replacement board
 ### a) Working principle
@@ -88,14 +88,7 @@ As we can see, if everything is running at the same time the spa can draw a tota
 - Heater 1 and 2 have a 20 seconds startup delay between each other.
 - Air pump and heater 2 can't run at the same time.
 
-We will implement the same rules to our board so the maximum current draw will be around 8A with a peak around 11A when starting the heater or the pump. (Which is about what is announced by Intex around 2400 Watts)
-
-For a 35um copper track PCB, a maximum temperature increase of 20°C and an ambiant temperature of 25°C we have the following width for the power tracks :
-
-- Heater 1 : TO BE CALCULATED
-- Heater 2 : TO BE CALCULATED
-- Water Pump : TO BE CALCULATED
-- Air Pump : TO BE CALCULATED
+We will implement the same rules to our board so the maximum current draw will be around 8A with a peak around 11A when starting the heater or the pump. (Which is about what is announced by Intex around 2400 Watts). By dimension the track width for 10A, 2oz/ft copper, an ambiant temperature of 25°C and a maximum temperature elevation, we find that we need a 2,36 mm (93mil) track width.
 
 ### d) Board production
 
