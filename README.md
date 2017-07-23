@@ -1,6 +1,6 @@
 # WORK IN PROGRESS
 
-# Intex SSP-H-20-1 Arduino Spa Manager
+# Intex SSP-H-20-1 ESP32 Spa Manager
 
 **WARNING 1 : The circuit in this project uses main voltage (220-240 Volt AC in western Europe). This can be deadly if not handled properly! You can easily hurt yourself as well. Build this circuit at your own risk.**
 
