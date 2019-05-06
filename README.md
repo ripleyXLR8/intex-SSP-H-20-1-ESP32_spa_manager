@@ -6,15 +6,15 @@
 
 **WARNING 2 : This project is still a work in progress, this page is a kind of building log, I haven't finish the board building and installation for the moment. Watch the issues page to see what is working and what is not.**
 
-This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to control the spa remotely and integrate it in my domotic system. I'm using Jeedom https://www.jeedom.com/, an open-source system, but it should work with other system since it rely on MQTT protocol. The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
+This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to control the spa remotely and integrate it in my domotic system. I'm using Jeedom https://www.jeedom.com/, an open-source system, but it should work with other system since it rely on MQTT protocol and a rest server (based on the Arest library - https://github.com/marcoschwartz/aREST). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
 
 ## 1) Intex motherboard reverse engineering
-Below the annotate picture of the motherboard with my understanding of its working principle. Since the card is labeled, everything is pretty straight forward except the descaler system and the over-engineered pump system (the upper terminal barrier connector on the board).
+Below the annotate picture of the motherboard with my understanding of its working principle. Since the card is labeled, everything is pretty straight forward except the descaler system and the pump system (the upper terminal barrier connector on the board).
 
 ![Motherboard schematic](/images/motherboard_schematic.png)
 
 ### a) Sensors
-There are 5 sensors connected to the board, 2 temperature sensors, 2 flow sensors and 1 temperature fuse. They are all connected with a kind of 3 pins JST connector, it looks like a JST XH 3P but the JST XH 3P doesn't have the lock mecanism.
+There are 5 sensors connected to the board, 2 temperature sensors, 2 flow sensors and 1 temperature fuse. They are all connected with a type of 3 pins JST connector, it looks like a JST XH 3P but the JST XH 3P doesn't have the lock mecanism.
 
 #### Temperature sensors
 Both temperature sensors are negative temperature coefficient (NTC) thermistore, it means that the resistance of the thermistore decreases with an increase in temperature in a non linear way. I use the code available on this page (http://www.circuitbasics.com/arduino-thermistor-temperature-sensor-tutorial/) to read the temperature from the thermistore. This code is based on the Steinhart-Hart equation (https://fr.wikipedia.org/wiki/Relation_de_Steinhart-Hart) and to work at his best, the coeficient of this equation must be adapted to your thermistore. Since there is 3 coefficients in this equation, you will need 3 points to determine the coefficients.
@@ -24,6 +24,8 @@ The temperature sensor 1 is installed at the intake of the water pump so it read
 The temperature sensor 2 is installed in the core of  heating elements and its function is to detect overheating over 50°C and shut down the heating if necessary.
 
 To measure the real temperature of the water in the spa I connected a DS18B20 thermal sensor in place of the LCD panel. Then I have recorded the temperature of the water, and the resistance of both integrated temperature probe of the spa during the heating process of the spa from 18°C to 40°C. The resut once smoothed is the curve presented below. With this curve we can determine the 3 coefficients of the Steinhart-Hart equation.
+
+[TO DO : INSERT CURVE + CALCUL COEF]
 
 #### Temperature fuse
 One temperature fuse is installed just below heating elements. I cannot test the triggering temperature but it seems that in normal condition the fuse let the current pass and if the temperature goes over 84°C then the fuse burn and the current stop passing and shut down the heating.
@@ -95,11 +97,10 @@ We will implement the same rules to our board so the maximum current draw will b
 
 ### d) Board production
 
-https://www.reichelt.de/my/1360986
 
 ## 3) Writing the code
 
-TO BE UPLOADED
+I'm using the Arduino IDE to write and upload code to the ESP32. The lastest release of the code can be found in this directtory.
 
 ## 4) Upload and first run
 
