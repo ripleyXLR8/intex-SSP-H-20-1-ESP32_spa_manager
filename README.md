@@ -133,6 +133,7 @@ If you have any error message during the start-up you should check your board co
 
 Once the board is connected to the wifi network you should open the following URL : `http://IP-OF-YOUR-BOARD`.You should get a JSON chain giving you the current state of the board. It should looks like this :
 
+'{"variables": {"flow1": false, "flow2": false, "temp1": 0.00, "temp2": 0.00, "heartbeat": 65065, "target_temp": 20.00, "filtration": false, "heating": false, "temp_regulation": false, "jet": false}, "id": "", "name": "", "hardware": "esp32", "connected": true}'
 
 ### b) Removing the old control board
 First, it is very important to DISCONNECT THE POWER CABLE of the Spa. Remove the four screws securing the spa cover and remove it. Then locate the cover of the control board, remove all the screws and remove the cover. On the control board remove all cable from the lower and upper terminal, from the sensors and from the control panel, then remove the four screws securing the board and remove it.
