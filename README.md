@@ -121,6 +121,21 @@ if you want to use mqtt you must set :
 `const char* mqttServer = "IP_OF_YOUR_MQTT_SERVER";`
 `const int mqttPort = PORT_OF_YOUR_MQTT_SERVER;`
 
+Additionnaly you could set-up the topic that will be used by the control board :
+- `const char* mqttTopicTemp1 = "spa/temp1";` -> will contain the temperature from the sensor 1 (read only)
+- `const char* mqttTopicTemp2 = "spa/temp2";`-> will contain the temperature from the sensor 2 (read only)
+- `const char* mqttTopicFlow1 = "spa/flow1";`-> will contain the flow detection from the sensor 1 (read only)
+- `const char* mqttTopicFlow2 = "spa/flow2";`-> will contain the flow detection from the sensor 2 (read only)
+- `const char* mqttTopicHeater = "spa/heater";` -> will tell you if the heater is enabled (read only)
+- `const char* mqttTopicHeartBeat = "spa/heartbeat";` -> will contain the heartbeat of the spa, an integer updated at each loop (read-only)
+- `const char* mqttTopicError = "spa/error";` -> will contain the lastest error from the spa (read only)
+
+- `const char* mqttTopicTarget = "spa/target";` -> will tell you what is the current target temperature (bi-directionnal)
+- `const char* mqttTopicTempRegulation = "spa/temp_regulation";` -> will tell you if the temperature regulation is enabled (bi-directionnal)
+- `const char* mqttTopicFiltration = "spa/filtration";` -> will tell you if the filtration is enabled (bi-directionnal)
+- `const char* mqttTopicJet = "spa/jet";`-> will tell you if jet is enabled (bi-directionnal)
+
+
 if you want to use WiFi OTA (a very usefull feature that will allow you to upload any update of the code over the air, wihout opening the case) you must set :
 `const bool ota_enable = true;`
 
@@ -133,7 +148,18 @@ If you have any error message during the start-up you should check your board co
 
 Once the board is connected to the wifi network you should open the following URL : `http://IP-OF-YOUR-BOARD`.You should get a JSON chain giving you the current state of the board. It should looks like this :
 
-'{"variables": {"flow1": false, "flow2": false, "temp1": 0.00, "temp2": 0.00, "heartbeat": 65065, "target_temp": 20.00, "filtration": false, "heating": false, "temp_regulation": false, "jet": false}, "id": "", "name": "", "hardware": "esp32", "connected": true}'
+`{"variables": {"flow1": false, "flow2": false, "temp1": 0.00, "temp2": 0.00, "heartbeat": 65065, "target_temp": 20.00, "filtration": false, "heating": false, "temp_regulation": false, "jet": false}, "id": "", "name": "", "hardware": "esp32", "connected": true}`
+
+If you have set-up the mqtt server
+
+### b) Trying to send some commands
+Try to connect to : `http://IP-OF-YOUR-BOARD/filtration?param=1`. This is the command to activate the filtration. You should receive a response of this form : `{"return_value": 0, "id": "", "name": "", "hardware": "esp32", "connected": true}`. You can turn it of by sending `http://IP-OF-YOUR-BOARD/filtration?param=0`.
+
+The list of the available command is :
+- `http://IP-OF-YOUR-BOARD/filtration?param=0` or `http://IP-OF-YOUR-BOARD/filtration?param=1` -> will enable or disable the filtration.
+- `http://IP-OF-YOUR-BOARD/jet?param=0` or `http://IP-OF-YOUR-BOARD/jet?param=1` -> will enable or disable the jet.
+- `http://192.168.100.75/temp_regulation?param=0` or `http://192.168.100.75/temp_regulation?param=0`  -> will enable or disable the temperature regulation.
+- `http://192.168.100.75/target_temp?param=X` -> will set the target temperature.
 
 ### b) Removing the old control board
 First, it is very important to DISCONNECT THE POWER CABLE of the Spa. Remove the four screws securing the spa cover and remove it. Then locate the cover of the control board, remove all the screws and remove the cover. On the control board remove all cable from the lower and upper terminal, from the sensors and from the control panel, then remove the four screws securing the board and remove it.
