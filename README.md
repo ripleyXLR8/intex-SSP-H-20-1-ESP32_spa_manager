@@ -105,3 +105,60 @@ I'm using the Arduino IDE to write and upload code to the ESP32. The lastest rel
 ## 4) Upload and first run
 
 I have connected the board to the spa on May 1st 2019. Main functions are working. See the "issues" page to see whhat is working and what is not. A new version of the board will be designed to solve some problems.
+
+## 5) Configuration and installation of the new control board
+### a) Configuring the new board and uploading the code
+Open the lastest *.ino file within the arduino IDE and configure the following variables to your needs.
+
+`const bool wifi_enable = true;`
+`const char* ssid     = "YOUR_WIFI_NETWORK_NAME";`
+`const char* password = "YOUR_WIFI_NETWORK_SECURITY_KEY"`
+
+**Please note that in the current state of developpement you must activate WiFi in order to control the spa. The local commands are not working properly.**
+
+if you want to use mqtt you must set :
+`const bool mqtt_enable = true;`
+`const char* mqttServer = "IP_OF_YOUR_MQTT_SERVER";`
+`const int mqttPort = PORT_OF_YOUR_MQTT_SERVER;`
+
+if you want to use WiFi OTA (a very usefull feature that will allow you to upload any update of the code over the air, wihout opening the case) you must set :
+`const bool ota_enable = true;`
+
+Place your ESP32 on a breadboard and upload the code. Once the upload is finish press the reset button of the board.
+
+### a) Checking the board WiFi connection
+Open the serial port monitor of the Arduino IDE and set the baudrate to 115200. You should see the start-up and the IP of your board on the WiFi network.
+
+If you have any error message during the start-up you should check your board configuration.
+
+Once the board is connected to the wifi network you should open the following URL : `http://IP-OF-YOUR-BOARD`.You should get a JSON chain giving you the current state of the board. It should looks like this :
+
+
+### b) Removing the old control board
+First, it is very important to DISCONNECT THE POWER CABLE of the Spa. Remove the four screws securing the spa cover and remove it. Then locate the cover of the control board, remove all the screws and remove the cover. On the control board remove all cable from the lower and upper terminal, from the sensors and from the control panel, then remove the four screws securing the board and remove it.
+
+### c) Installation of the new control board
+Remove the central plastic pin in order to install the new board into the enclosure and then install the new board using the 4 screws from the old board. Then connect the old cables on the new board. Here is a quick connection guide based on the color of my board (double check it with you board before powering up the spa) :
+
+- Red connector -> Flow 1 connector
+- Green connector -> Flow 2 connector
+- White connector ->  Temperature 2 connector
+- Black connector ->  Temperature 1 connector
+- Yellow connector -> DO NOT CONNECT (it doesn't work currently)
+- Connector 1 -> N terminal
+- Connector 2 -> L terminal
+- Connector 5 -> N of the pump terminal
+- Connector 6 -> L of the pump terminal
+- Connector 7 -> N of the jet terminal
+- Connector 8 -> L of the jet terminal
+- Connector 9 -> N of the heater 1 terminal
+- Connector 10 -> L of the heater 1 terminal
+- Connector 11 -> N of the heater 2 terminal
+- Connector 12 -> L of the heater 2 terminal
+
+Then you have to connect together some wires from the upper terminal and isolate all non connected wires before powering up the spa.
+- Cable A must be connected with cable C
+- Cable B must be connected with cable D
+
+You should get something like that :
+![Board installed](/images/board_installed.jpg "Board installed")
