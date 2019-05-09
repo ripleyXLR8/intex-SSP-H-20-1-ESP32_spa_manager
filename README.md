@@ -4,9 +4,11 @@
 
 **WARNING 1 : The circuit in this project uses main voltage (220-240 Volt AC in western Europe). This can be deadly if not handled properly! You can easily hurt yourself as well. Build this circuit at your own risk.**
 
-**WARNING 2 : This project is still a work in progress, this page is a kind of building log, I haven't finish the board building and installation for the moment. Watch the issues page to see what is working and what is not.**
+**WARNING 2 : Never ever ever power this circuit directly without a GFCI outlet (differential circuit breaker). Remember this wircuit will be used in a wet environnement.**
 
-This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard. My wish was to be able to control the spa remotely and integrate it in my domotic system. I'm using Jeedom https://www.jeedom.com/, an open-source system, but it should work with other system since it rely on MQTT protocol and a rest server (based on the Arest library - https://github.com/marcoschwartz/aREST). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
+**WARNING 3 : This project is still a work in progress, this page is a kind of building log, I haven't finish the board building and installation for the moment. Watch the issues page to see what is working and what is not.**
+
+This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard (it may work with other Intex spa and could be used to build a spa from scratch). My goal was to be able to control the spa remotely and integrate it in my domotic system. I'm using Jeedom https://www.jeedom.com/, an open-source system, but it should work with other system since it rely on MQTT protocol and a rest server (based on the Arest library - https://github.com/marcoschwartz/aREST). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
 
 ## 1) Intex motherboard reverse engineering
 Below the annotate picture of the motherboard with my understanding of its working principle. Since the card is labeled, everything is pretty straight forward except the descaler system and the pump system (the upper terminal barrier connector on the board).
@@ -14,7 +16,7 @@ Below the annotate picture of the motherboard with my understanding of its worki
 ![Motherboard schematic](/images/motherboard_schematic.png)
 
 ### a) Sensors
-There are 5 sensors connected to the board, 2 temperature sensors, 2 flow sensors and 1 temperature fuse. They are all connected with a type of 3 pins JST connector, it looks like a JST XH 3P but the JST XH 3P doesn't have the lock mecanism.
+There are 5 sensors connected to the board, 2 temperature sensors (black and white connectors), 2 flow sensors (red and green connectors) and 1 temperature fuse (yellow connector). They are all connected with a 3 pins JST like connector (it looks like a JST XH 3P but the JST XH 3P doesn't have a lock mecanism).
 
 #### Temperature sensors
 Both temperature sensors are negative temperature coefficient (NTC) thermistore, it means that the resistance of the thermistore decreases with an increase in temperature in a non linear way. I use the code available on this page (http://www.circuitbasics.com/arduino-thermistor-temperature-sensor-tutorial/) to read the temperature from the thermistore. This code is based on the Steinhart-Hart equation (https://fr.wikipedia.org/wiki/Relation_de_Steinhart-Hart) and to work at his best, the coeficient of this equation must be adapted to your thermistore. Since there is 3 coefficients in this equation, you will need 3 points to determine the coefficients.
