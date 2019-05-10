@@ -8,7 +8,7 @@
 
 **WARNING 3 : This project is still a work in progress, this page is a kind of building log, I haven't finish the board building and installation for the moment. Watch the issues page to see what is working and what is not.**
 
-This project aims to provide a replacement for the motherboard of the Intex SSP-20 motherboard (it may work with other Intex spa and could be used to build a spa from scratch). My goal was to be able to control the spa remotely and integrate it in my domotic system. I'm using Jeedom https://www.jeedom.com/, an open-source system, but it should work with other system since it rely on MQTT protocol and a rest server (based on the Arest library - https://github.com/marcoschwartz/aREST). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
+This project aims to build a replacement for the motherboard of the Intex SSP-20 Spa (it may work with other Intex spa and could be used to build a spa from scratch, but this is not the purpose of this page). My goal was to be able to control the spa remotely and integrate it in my domotic system. I'm using Jeedom https://www.jeedom.com/ as a domotic system, an open-source system, but it should work with other system since the communication part of this board will rely on MQTT protocol and a rest server (based on the Arest library - https://github.com/marcoschwartz/aREST). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
 
 ## 1) Intex motherboard reverse engineering
 Below the annotate picture of the motherboard with my understanding of its working principle. Since the card is labeled, everything is pretty straight forward except the descaler system and the pump system (the upper terminal barrier connector on the board).
@@ -19,15 +19,23 @@ Below the annotate picture of the motherboard with my understanding of its worki
 There are 5 sensors connected to the board, 2 temperature sensors (black and white connectors), 2 flow sensors (red and green connectors) and 1 temperature fuse (yellow connector). They are all connected with a 3 pins JST like connector (it looks like a JST XH 3P but the JST XH 3P doesn't have a lock mecanism).
 
 #### Temperature sensors
-Both temperature sensors are negative temperature coefficient (NTC) thermistore, it means that the resistance of the thermistore decreases with an increase in temperature in a non linear way. I use the code available on this page (http://www.circuitbasics.com/arduino-thermistor-temperature-sensor-tutorial/) to read the temperature from the thermistore. This code is based on the Steinhart-Hart equation (https://fr.wikipedia.org/wiki/Relation_de_Steinhart-Hart) and to work at his best, the coeficient of this equation must be adapted to your thermistore. Since there is 3 coefficients in this equation, you will need 3 points to determine the coefficients.
+Both temperature sensors are negative temperature coefficient (NTC) thermistore, it means that the resistance of the thermistore decreases with an increase in temperature.
 
-The temperature sensor 1 is installed at the intake of the water pump so it reads the water temperature and it is use to regulate the water temperature from 20°C to 40°C.
+- The temperature sensor 1 is installed at the intake of the water pump so it reads the water temperature and it is use to regulate the water temperature from 20°C to 40°C.
 
-The temperature sensor 2 is installed in the core of  heating elements and its function is to detect overheating over 50°C and shut down the heating if necessary.
+- The temperature sensor 2 is installed in the core of  heating elements and its function is to detect overheating over 50°C and shut down the heating if necessary.
 
-To measure the real temperature of the water in the spa I connected a DS18B20 thermal sensor in place of the LCD panel. Then I have recorded the temperature of the water, and the resistance of both integrated temperature probe of the spa during the heating process of the spa from 18°C to 40°C. The resut once smoothed is the curve presented below. With this curve we can determine the 3 coefficients of the Steinhart-Hart equation.
+Since I'm reading a resistance value and not a temperature, I need to do some calibration (i.e. find a relation between the resistance I'm measuring and the temperature). To measure the real temperature of the water in the spa I connected a DS18B20 thermal sensor in place of the LCD panel. Then I have recorded the temperature of the water and the resistance of both integrated temperature probe of the spa during the heating process of the spa from 18°C to 40°C. The resut once smoothed is the curve presented below. (smoothing is mandatory since the ADC of the ESP32 is pretty noisy...)
 
-[TO DO : INSERT CURVE + CALCUL COEF]
+![Temperature resistance curve](/images/temperature-resistance-curve.jpg)
+
+I first tried to use the Steinhart-Hart equation https://fr.wikipedia.org/wiki/Relation_de_Steinhart-Hart but O did not get good results using this equation, especialy from 34 to 38 degrees.
+
+Since I'm observing that the curve is pretty linear from 18 to 38 degrees, and that the value of the resistance is 0 for 40°C, I tried a linear regression. The result is pretty decent with a R=0,9926.
+
+The equation is T = -276,38*R + 10513
+
+You can also try a logarithmic regression an get the following equation : T = -7750*Ln(R) + 28589 
 
 #### Temperature fuse
 One temperature fuse is installed just below heating elements. I cannot test the triggering temperature but it seems that in normal condition the fuse let the current pass and if the temperature goes over 84°C then the fuse burn and the current stop passing and shut down the heating.
@@ -35,11 +43,11 @@ One temperature fuse is installed just below heating elements. I cannot test the
 #### Flow sensors
 Both flow sensors let the current pass only if flow is detected, they ensure that no heating is activated if there is no flow detected in the system.
 
-### b) Power supply, relays and other stuffs
-All the power cable (input and outputs) are connected by a barrier terminal block. We will use the same connector on our board because we don't want to alter the power cable and change their connector. Please note that this barrier connector is one of the most difficult part to find for this project. I cannot find it on https://www.reichelt.de/ which is my usual parts supplier, but I find on http://www.newark.com/.
+### b) Power supply, relays and other parts
+All the power cable (input and outputs) are connected by a barrier terminal block. We will use the same connector on our board because we don't want to alter the power cable and change their connector.
 
 #### Heating elements
-There is two heating element in the spa for a total power of 2000Watts. They are directly powered by a relay allowing 220VAC to pass trough the heating element.
+There is two heating element in the spa for a total power of 2000 Watts. They are directly powered by a relay allowing 220VAC to pass trough the heating element.
 Please note that in normal condition :
 - The water pump is always powered when heating. Any flow interruption signaled by the flow sensor result in an error and the heating stops.
 - When you push the heating button the heating doesn't start immediately, the water pump starts and then a couple seconds after the heater 1 is powered then a couple seconds later the heater 2 starts.
