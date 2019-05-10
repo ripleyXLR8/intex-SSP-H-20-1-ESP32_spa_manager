@@ -157,7 +157,7 @@ Once the board is connected to the wifi network you should open the following UR
 If you have set-up the mqtt server
 
 ### b) Trying to send some commands
-Try to connect to : `http://IP-OF-YOUR-BOARD/filtration?param=1`. This is the command to activate the filtration. You should receive a response of this form : `{"return_value": 0, "id": "", "name": "", "hardware": "esp32", "connected": true}`. You can turn it of by sending `http://IP-OF-YOUR-BOARD/filtration?param=0`.
+Try to connect to : `http://IP-OF-YOUR-BOARD/filtration?param=1`. This is the command to activate the filtration. You should receive a response of this form : `{"return_value": 0, "id": "", "name": "", "hardware": "esp32", "connected": true}`. You can turn it off by sending `http://IP-OF-YOUR-BOARD/filtration?param=0`.
 
 The list of the available command is :
 - `http://IP-OF-YOUR-BOARD/filtration?param=0` or `http://IP-OF-YOUR-BOARD/filtration?param=1` -> will enable or disable the filtration.
