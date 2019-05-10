@@ -4,7 +4,7 @@
 
 **WARNING 1 : The circuit in this project uses main voltage (220-240 Volt AC in western Europe). This can be deadly if not handled properly! You can easily hurt yourself as well. Build this circuit at your own risk.**
 
-**WARNING 2 : Never ever ever power this circuit directly without a GFCI outlet (differential circuit breaker). Remember this wircuit will be used in a wet environnement.**
+**WARNING 2 : Never ever ever power this circuit directly without a GFCI outlet (differential circuit breaker). Remember this wircuit will be used in a wet environnement. If you don't understand this, please watch this video https://www.youtube.com/watch?v=SHGo-52wCDc&t=63s and get some electrical knowledge about ground protection.**
 
 **WARNING 3 : This project is still a work in progress, this page is a kind of building log, I haven't finish the board building and installation for the moment. Watch the issues page to see what is working and what is not.**
 
