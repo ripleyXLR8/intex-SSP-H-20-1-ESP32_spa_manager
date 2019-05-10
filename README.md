@@ -63,7 +63,7 @@ The water pump is powered by 12VAC but before that a relay allows 220VAC to flow
 I will replace the control panel with an external control box connected through the enclosure of the spa with an IP68 SP21-12 connector. (available here : https://www.amazon.com/gp/product/B071R6RSN6/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&psc=1)
 
 #### Descaler system
-It seems that this spa is equiped by a magnetic descaling system. Here is the wikipedia page on this technology (https://en.wikipedia.org/wiki/Magnetic_water_treatment). I cannot find the type of signal send to this device, it seems that the signal is AC with a modulation of amplitude. I will investigate it later because for the moment I don't have an oscilloscope so this function has not been implemented on the replacement board.
+It seems that this spa is equiped by a magnetic descaling system. Here is the wikipedia page on this technology (https://en.wikipedia.org/wiki/Magnetic_water_treatment). I cannot find the type of signal send to this device, it seems that the signal is AC with a modulation of amplitude. I will maybe investigate it later... so this function has not been implemented on the replacement board.
 
 ## 2) Designing the replacement board
 ### a) Working principle
@@ -75,9 +75,9 @@ An ESP32 is the heart of the system. It allows us to connect :
 - 1 LCD display on 2 digital inputs (I2C protocol),
 - 4 power relays on 4 digital inputs.
 
-Relays, the LCD and the ESP32 will not be powered from the 5 Volt pin of the arduino, we will use directly the 5 Volt DC power supply to power them directly.
+Relays, LCD, temperature sensors, flow sensors, and buttons will not be powered from the 5 Volt pin of the arduino, we will use directly the 5 Volt DC power supply to power them directly.
 
-It will also allow us to connect to the wifi and the MQTT server to send and receive data.
+The integrated wifi chip also allow us to connect to the wifi and the MQTT server to send and receive data.
 
 ### b) Electrical drawing
 I used Eagle 8.2.2 to design the replacement board, below is the electrical drawing. The eagle files will be available soon.
@@ -85,7 +85,7 @@ I used Eagle 8.2.2 to design the replacement board, below is the electrical draw
 ![Electrical schematic](/images/electrical_schematic.png)
 
 ### c) Board schematic
-I wanted the board to be easily produce at home by anybody so I choose to use a single side PCB with plated-trhough holes (PTH) components. SMD component will be a also good choice, but I know that occasionnal welder are more at ease with PTH components. The drilling size is 0.8mm, the width of the electrical tracks is 16mil (0.40mm) and the clearance is 10mil (0.25mm), theses parameters allows you to produce the board using the toner transfer method (this method requires very few tools). There is only 2 air wires on the current version of the board (you can propose a new version to reduce this number).
+I wanted the board to be easily produce at home by anybody so I choose to use a single side PCB with plated-trhough holes (PTH) components. SMD component will be a also good choice, but I know that occasionnal welder are more at ease with PTH components. The drilling size is 0.8mm, the width of the electrical tracks is 16mil (0.40mm) and the clearance is 10mil (0.25mm), theses parameters allows you to produce the board using the toner transfer method (this method requires very few tools).
 
 Relays are integrated on the board to be integrated more easily in the original enclosure.
 
@@ -106,17 +106,11 @@ As we can see, if everything is running at the same time the spa can draw a tota
 We will implement the same rules to our board so the maximum current draw will be around 8A with a peak around 11A when starting the heater or the pump. (Which is about what is announced by Intex around 2400 Watts). By dimension the track width for 10A, 2oz/ft copper, an ambiant temperature of 25°C and a maximum temperature elevation of 5 degrees, we find that we need a 2,36 mm (93mil) track width.
 
 ### d) Board production
+Board schematic has been sent to PCBway a chinese PCB prototyping company. https://www.pcbway.com/. They can even populate your board with the component if you want them to do it.
 
+The list of component with links to buy them is provided below :
 
-## 3) Writing the code
-
-I'm using the Arduino IDE to write and upload code to the ESP32. The lastest release of the code can be found in this directtory.
-
-## 4) Upload and first run
-
-I have connected the board to the spa on May 1st 2019. Main functions are working. See the "issues" page to see whhat is working and what is not. A new version of the board will be designed to solve some problems.
-
-## 5) Configuration and installation of the new control board
+## 5) How to configure and install the new control board
 ### a) Configuring the new board and uploading the code
 Open the lastest *.ino file within the arduino IDE and configure the following variables to your needs.
 
