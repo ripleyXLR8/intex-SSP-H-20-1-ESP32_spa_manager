@@ -67,7 +67,7 @@ It seems that this spa is equiped by a magnetic descaling system. Here is the wi
 
 ## 2) Designing the replacement board
 ### a) Working principle
-An ESP32 is the heart of the system. It allows us to connect : 
+An ESP32 (DevKitc) is the heart of the system. It allows us to connect : 
 - 2 temperature sensors on 2 analog inputs,
 - 2 flow sensors on 2 digital inputs,
 - 1 temperature fuse on 1 digital input,
