@@ -342,7 +342,7 @@ void loop() {
     String strDiag = String(C_GREEN) + "Normal operation" + C_RESET;
     if(temp_regulation_enabled && !heating_enabled) {
       if(!fuse && !bypass_fuse) strDiag = String(C_RED) + "BLOCKED: Thermal fuse tripped" + C_RESET;
-      else if(!flow_1 && !bypass_flow) strDiag = String(C_RED) + "BLOCKED: No water flow" + C_RESET;
+      else if((!flow_1 || !flow_2) && !bypass_flow) strDiag = String(C_RED) + "BLOCKED: No water flow" + C_RESET;
       else if(current_temp >= max_temp) strDiag = String(C_RED) + "BLOCKED: 39C safety limit" + C_RESET;
       else if(current_temp >= (target_temp - hysterisys) && current_temp <= (target_temp + hysterisys)) strDiag = String(C_YELLOW) + "Dead zone (hysteresis)" + C_RESET;
       else if(current_temp > target_temp) strDiag = String(C_CYAN) + "Water at target temperature" + C_RESET;
@@ -610,7 +610,7 @@ void activate_filtration(bool state) {
 }
 
 void activate_heating(bool state) {
-  if(state && (flow_1 || bypass_flow) && (fuse || bypass_fuse)) {
+  if(state && (flow_1 || bypass_flow) && (flow_2 || bypass_flow) && (fuse || bypass_fuse)) {
     if(!heating_enabled) {
       request_mqtt_update = true;
       heater1OnTime = heartbeat; // start the stagger timer
@@ -630,7 +630,7 @@ void activate_heating(bool state) {
 }
 
 bool must_heat() {
-  if(!temp_regulation_enabled || (!flow_1 && !bypass_flow) || (!fuse && !bypass_fuse) || current_temp >= max_temp) {
+  if(!temp_regulation_enabled || (!flow_1 && !bypass_flow) || (!flow_2 && !bypass_flow) || (!fuse && !bypass_fuse) || current_temp >= max_temp) {
     if(heating_enabled) {
        lastHeatingStateChange = heartbeat;
     }

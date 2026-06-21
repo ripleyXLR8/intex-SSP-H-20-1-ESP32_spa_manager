@@ -159,7 +159,7 @@ On every successful MQTT connection the board also publishes **Home Assistant MQ
 ### d) Safety interlocks and current limiting
 The heating logic enforces several hardware-protection rules. The heater stays off unless **all** of these hold:
 - the thermostat is enabled and the water is below target (with a ±1 °C hysteresis band),
-- **water flow is detected** on the flow sensor (`flow_1`),
+- **water flow is detected** on both flow sensors (`flow_1` and `flow_2`),
 - the **thermal fuse reads intact** (`fuse`),
 - the water temperature is below the 39 °C safety ceiling,
 - the 15-minute anti-short-cycle timer allows the change (bypassed once on the first cycle).
