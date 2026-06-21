@@ -112,6 +112,9 @@ const char* mqttTopicError = "spa_intex/error";
 #define TEMP_1_PIN 34 
 #define TEMP_2_PIN 35 
 #define TEMP_FUSE_PIN 32
+
+// Niveau logique des entrees de securite (a verifier selon le cablage de la carte)
+#define FLOW_ACTIVE_LEVEL HIGH   // niveau lu quand un debit d'eau est present
 #define SERIESRESISTOR_TEMP_1 9980
 #define SERIESRESISTOR_TEMP_2 9980 
 
@@ -196,6 +199,7 @@ void setup() {
   pinMode(TEMP_1_PIN, INPUT);
   pinMode(TEMP_2_PIN, INPUT);
   pinMode(FLOW_1_PIN, INPUT);
+  pinMode(FLOW_2_PIN, INPUT);
   pinMode(TEMP_FUSE_PIN, INPUT);
 
   // --- WIFIMANAGER ---
@@ -536,9 +540,8 @@ void read_sensors() {
 
   current_temp = temp_2; 
 
-  // TODO : Remplacer "true" par "digitalRead(FLOW_X_PIN)" une fois les capteurs reparés
-  bool new_flow_1 = true;
-  bool new_flow_2 = true;
+  bool new_flow_1 = (digitalRead(FLOW_1_PIN) == FLOW_ACTIVE_LEVEL);
+  bool new_flow_2 = (digitalRead(FLOW_2_PIN) == FLOW_ACTIVE_LEVEL);
   
   if((new_flow_1 != flow_1) || (new_flow_2 != flow_2)) {
     request_mqtt_update = true;
