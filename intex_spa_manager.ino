@@ -115,6 +115,7 @@ const char* mqttTopicError = "spa_intex/error";
 
 // Niveau logique des entrees de securite (a verifier selon le cablage de la carte)
 #define FLOW_ACTIVE_LEVEL HIGH   // niveau lu quand un debit d'eau est present
+#define FUSE_OK_LEVEL HIGH       // niveau lu quand le fusible thermique est intact
 #define SERIESRESISTOR_TEMP_1 9980
 #define SERIESRESISTOR_TEMP_2 9980 
 
@@ -326,7 +327,8 @@ void loop() {
 
     String strDiag = String(C_GREEN) + "Fonctionnement normal" + C_RESET;
     if(temp_regulation_enabled && !heating_enabled) {
-      if(!flow_1) strDiag = String(C_RED) + "BLOCAGE : Capteur d'eau a 0" + C_RESET;
+      if(!fuse) strDiag = String(C_RED) + "BLOCAGE : Fusible thermique declenche" + C_RESET;
+      else if(!flow_1) strDiag = String(C_RED) + "BLOCAGE : Capteur d'eau a 0" + C_RESET;
       else if(current_temp >= max_temp) strDiag = String(C_RED) + "BLOCAGE : Securite 39C" + C_RESET;
       else if(current_temp >= (target_temp - hysterisys) && current_temp <= (target_temp + hysterisys)) strDiag = String(C_YELLOW) + "Zone morte (Hysteresis)" + C_RESET;
       else if(current_temp > target_temp) strDiag = String(C_CYAN) + "Eau a bonne temperature" + C_RESET;
@@ -442,7 +444,7 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
     request_mqtt_update = true;
   }
   else if(strcmp(topic, mqttTopicHeaterForce) == 0) {
-    if(message == "1" && flow_1) {
+    if(message == "1" && flow_1 && fuse) {
       digitalWrite(HEATER_1_PIN, HIGH);
       delay(500); 
       digitalWrite(HEATER_2_PIN, HIGH);
@@ -524,7 +526,7 @@ void activateOTA() {
 }
 
 void read_sensors() {
-  fuse = digitalRead(TEMP_FUSE_PIN);
+  fuse = (digitalRead(TEMP_FUSE_PIN) == FUSE_OK_LEVEL); // true = fusible intact (securite OK)
   
   float raw_temp_1 = read_temperature(TEMP_1_PIN, SERIESRESISTOR_TEMP_1);
   float raw_temp_2 = read_temperature(TEMP_2_PIN, SERIESRESISTOR_TEMP_2);
@@ -582,7 +584,7 @@ void activate_filtration(bool state) {
 }
 
 void activate_heating(bool state) {
-  if(state && flow_1) {
+  if(state && flow_1 && fuse) {
     if(!heating_enabled) request_mqtt_update = true;
     heating_enabled = true;
     digitalWrite(HEATER_1_PIN, HIGH);
@@ -596,7 +598,7 @@ void activate_heating(bool state) {
 }
 
 bool must_heat() {
-  if(!temp_regulation_enabled || !flow_1 || current_temp >= max_temp) {
+  if(!temp_regulation_enabled || !flow_1 || !fuse || current_temp >= max_temp) {
     if(heating_enabled) {
        lastHeatingStateChange = heartbeat; 
     }
