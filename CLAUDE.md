@@ -13,7 +13,7 @@ Firmware for an ESP32 (DevKitC) that replaces the original motherboard of an Int
 - **Compile & upload:** Arduino IDE, board = ESP32 Dev Module, baud 115200. No CLI build is configured in this repo.
 - **Required libraries (Arduino Library Manager):** `PubSubClient`, `Arduino_JSON`, `WiFiManager` (tzapu), plus the ESP32 core bundles `WiFi`, `ArduinoOTA`, `esp_task_wdt`, `Preferences`.
 - **OTA updates:** after the first USB flash, the device registers with ArduinoOTA, so subsequent uploads can be done over WiFi (no need to open the enclosure).
-- **Serial/Telnet debug:** logs go to `Serial` (115200) AND to a Telnet server on port 23 (`telnet <device-ip>`). Use `debugPrint`/`debugPrintln` (not raw `Serial.print`) so output reaches both. Output uses ANSI color codes (the `C_*` macros).
+- **Serial/Telnet debug:** logs go to `Serial` (115200) AND to a Telnet server on port 23 (`telnet <device-ip>`). Use `debugPrint`/`debugPrintln` (not raw `Serial.print`) so output reaches both. Output uses ANSI color codes (the `C_*` macros). The Telnet server is intentionally unauthenticated (read-only dashboard, trusted-LAN only) — by design, don't add auth.
 - **No test suite** exists; verification is done on hardware via the serial/Telnet dashboard printed every 5 s in `loop()`.
 
 ## First-boot configuration (no hardcoded credentials)
