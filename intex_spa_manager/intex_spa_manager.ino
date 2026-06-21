@@ -359,7 +359,7 @@ void loop() {
     debugPrintln("  Filtration   : [" + formatState(filtration_enabled, "ACTIVE", "INACTIVE") + "]");
     debugPrintln("  Bulles (Jet) : [" + formatState(jet_enabled, "ACTIVES", "INACTIVES") + "]");
     debugPrintln("  Chauffage    : [" + formatState(heating_enabled, "EN CHAUFFE", "ETEINT") + "]");
-    debugPrintln("  Capteurs Eau : F1 [" + formatState(flow_1, "FORCÉ (1)", "ERREUR") + "]  |  F2 [" + formatState(flow_2, "FORCÉ (1)", "ERREUR") + "]");
+    debugPrintln("  Capteurs Eau : F1 [" + formatState(flow_1, "DÉTECTÉ", "PAS DE DÉBIT") + "]  |  F2 [" + formatState(flow_2, "DÉTECTÉ", "PAS DE DÉBIT") + "]");
     
     debugPrintln(String(C_CYAN) + "---------------------------------------------------" + C_RESET);
     debugPrintln("  Minuteur     : " + String(elMins) + "m " + String(elSecs) + "s ecoules");
