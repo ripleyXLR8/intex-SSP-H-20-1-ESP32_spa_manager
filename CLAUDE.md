@@ -36,7 +36,7 @@ This is the core safety logic. Heating is only allowed when ALL hold: `temp_regu
 Inrush limiting (in `activate_heating()`): heater 2 energizes only ~20 s after heater 1 (`heaterStageDelay`) and never while the jet runs — keep both rules.
 
 ### Sensors
-- **Temperature:** NTC thermistors on `TEMP_1_PIN`/`TEMP_2_PIN` (ADC), oversampled (`num_samples`) and EMA-smoothed (`smoothing_factor`) because the ESP32 ADC is noisy. Resistance→temp uses the logarithmic fit `T = -7750*ln(R) + 28589` in `read_temperature()` (see README for the calibration derivation). `temp_2` is used as `current_temp`.
+- **Temperature:** NTC thermistors on `TEMP_1_PIN`/`TEMP_2_PIN` (ADC), oversampled (`num_samples`) and EMA-smoothed (`smoothing_factor`) because the ESP32 ADC is noisy. Resistance→temp uses the logarithmic fit `T = -7750*ln(R) + 28589` in `read_temperature()` (see README for the calibration derivation). `temp_2` is used as `current_temp` for regulation — and that is correct: **on the actual hardware `temp_2` (TEMP_2_PIN) is the pump-intake sensor reading real spa water, while `temp_1` is the heater-exhaust sensor (runs hot during heating).** This is the OPPOSITE of the README's section 1 numbering, which describes the original Intex board, not this wiring — do not "fix" `current_temp` to `temp_1`.
 - **Flow / fuse:** `read_sensors()` reads the real digital inputs into `flow_1`/`flow_2`/`fuse`. The active levels are `#define`d (`FLOW_ACTIVE_LEVEL`, `FUSE_OK_LEVEL`, both `HIGH`) — verify against the board; a disconnected input fails to the blocking state. Either interlock can be temporarily overridden via the `bypass_flow`/`bypass_fuse` MQTT switches (see MQTT topics).
 
 ### MQTT topics
