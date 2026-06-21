@@ -105,7 +105,6 @@ const char* mqttTopicJet = "spa_intex/jet";
 const char* mqttTopicFiltration = "spa_intex/filtration";
 const char* mqttTopicTarget = "spa_intex/target";
 const char* mqttTopicTempRegulation = "spa_intex/thermostat";
-const char* mqttTopicHeaterForce = "spa_intex/heater";
 const char* mqttTopicInfo = "spa_intex/info";
 const char* mqttTopicReset = "spa_intex/reset";
 const char* mqttTopicError = "spa_intex/error";
@@ -447,7 +446,6 @@ void connect_mqtt() {
       MQTTclient.subscribe(mqttTopicTarget);
       MQTTclient.subscribe(mqttTopicTempRegulation);
       MQTTclient.subscribe(mqttTopicReset);
-      MQTTclient.subscribe(mqttTopicHeaterForce);
       MQTTclient.subscribe(mqttTopicBypassFlow);
       MQTTclient.subscribe(mqttTopicBypassFuse);
     } else {
@@ -469,24 +467,6 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
   if(strcmp(topic, mqttTopicTarget) == 0) {
     target_temp = message.toFloat();
     if(target_temp > max_temp) target_temp = max_temp;
-    request_mqtt_update = true;
-  }
-  else if(strcmp(topic, mqttTopicHeaterForce) == 0) {
-    if(message == "1" && (flow_1 || bypass_flow) && (fuse || bypass_fuse)) {
-      // Start heater 1; heater 2 is handled by activate_heating
-      // (startup stagger + exclusion with the bubbles/jet)
-      digitalWrite(HEATER_1_PIN, HIGH);
-      heating_enabled = true;
-      heater1OnTime = millis();
-      lastHeatingStateChange = millis();
-      isFirstCycle = false;
-    } else {
-      digitalWrite(HEATER_1_PIN, LOW);
-      delay(500);
-      digitalWrite(HEATER_2_PIN, LOW);
-      heating_enabled = false;
-      lastHeatingStateChange = millis();
-    }
     request_mqtt_update = true;
   }
   else if(strcmp(topic, mqttTopicJet) == 0) {

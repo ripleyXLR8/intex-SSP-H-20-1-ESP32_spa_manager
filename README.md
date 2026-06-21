@@ -150,7 +150,6 @@ Command topics (publish `1` or `0`, or a number for the target) :
 - `spa_intex/thermostat` -> enable/disable the temperature regulation (enabling it also turns filtration on).
 - `spa_intex/filtration` -> enable/disable the filtration (water pump).
 - `spa_intex/jet` -> enable/disable the jet (air pump / bubbles).
-- `spa_intex/heater` -> force the heater on/off (`1` only takes effect if water flow is detected and the thermal fuse is intact).
 - `spa_intex/reset` -> publish `1` to reboot the board after a 10 s delay.
 - `spa_intex/bypass_flow` -> override the water-flow interlock (see safety section below).
 - `spa_intex/bypass_fuse` -> override the thermal-fuse interlock (see safety section below).
