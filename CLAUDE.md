@@ -49,5 +49,5 @@ Heaters 18/19, Jet 5, Pump 17, Flow 23/22, Temp ADC 34/35, Temp-fuse 32. Eagle s
 
 ## Conventions
 - Comments and serial/log strings are in **English** (the sketch was fully translated from French); keep new strings English. Note: MQTT topic strings, JSON keys, and HA `uniq_id`s are protocol identifiers — never translate those.
-- Use the `debugPrint*` helpers and `C_*` ANSI macros for any new logging.
+- Use the `debugPrint*` helpers and `C_*` ANSI macros for any new logging. In hot paths (e.g. the 5 s dashboard) build lines with `snprintf` into stack `char` buffers and the `fmtState()` helper rather than Arduino `String` concatenation, to avoid heap churn/fragmentation; `C_*` macros are string literals so they concatenate into format strings at compile time.
 - Keep `loop()` non-blocking — avoid `delay()` in the main path (short `delay()`s exist only in `setup()`/relay test/heater staging) so the watchdog isn't tripped.

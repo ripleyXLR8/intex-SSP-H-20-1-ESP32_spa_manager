@@ -193,8 +193,9 @@ void handleTelnet() {
   }
 }
 
-String formatState(bool state, String tTrue, String tFalse) {
-  return state ? (String(C_GREEN) + tTrue + C_RESET) : (String(C_RED) + tFalse + C_RESET);
+// Write a colored state label into buf (no heap allocation, unlike a String return).
+void fmtState(char* buf, size_t n, bool state, const char* tTrue, const char* tFalse) {
+  snprintf(buf, n, "%s%s%s", state ? C_GREEN : C_RED, state ? tTrue : tFalse, C_RESET);
 }
 
 // ==========================================
@@ -332,44 +333,79 @@ void loop() {
     unsigned long elMins = elapsedSec / 60;
     unsigned long elSecs = elapsedSec % 60;
 
-    String strLock = String(C_GREEN) + "UNLOCKED" + C_RESET;
+    char line[200];
+    char a[48], b[48];
+
+    // Cycle lock state
+    char lock[80];
     if (elapsedSec < (minHeatingCycle / 1000)) {
       unsigned long remSec = (minHeatingCycle / 1000) - elapsedSec;
-      strLock = String(C_YELLOW) + String(remSec / 60) + "m " + String(remSec % 60) + "s remaining" + C_RESET;
+      snprintf(lock, sizeof(lock), "%s%lum %lus remaining%s", C_YELLOW, remSec / 60, remSec % 60, C_RESET);
+    } else {
+      snprintf(lock, sizeof(lock), "%sUNLOCKED%s", C_GREEN, C_RESET);
     }
-    if (isFirstCycle) strLock += " (ignored for 1st cycle)";
+    if (isFirstCycle) strncat(lock, " (ignored for 1st cycle)", sizeof(lock) - strlen(lock) - 1);
 
-    String strDiag = String(C_GREEN) + "Normal operation" + C_RESET;
+    // Diagnostic (every branch is a compile-time constant colored literal)
+    const char* diag = C_GREEN "Normal operation" C_RESET;
     if(temp_regulation_enabled && !heating_enabled) {
-      if(!fuse && !bypass_fuse) strDiag = String(C_RED) + "BLOCKED: Thermal fuse tripped" + C_RESET;
-      else if((!flow_1 || !flow_2) && !bypass_flow) strDiag = String(C_RED) + "BLOCKED: No water flow" + C_RESET;
-      else if(current_temp >= max_temp) strDiag = String(C_RED) + "BLOCKED: 39C safety limit" + C_RESET;
-      else if(current_temp >= (target_temp - hysterisys) && current_temp <= (target_temp + hysterisys)) strDiag = String(C_YELLOW) + "Dead zone (hysteresis)" + C_RESET;
-      else if(current_temp > target_temp) strDiag = String(C_CYAN) + "Water at target temperature" + C_RESET;
-      else if(!isFirstCycle && elapsedSec < (minHeatingCycle / 1000)) strDiag = String(C_YELLOW) + "Waiting (anti-short-cycle)" + C_RESET;
+      if(!fuse && !bypass_fuse) diag = C_RED "BLOCKED: Thermal fuse tripped" C_RESET;
+      else if((!flow_1 || !flow_2) && !bypass_flow) diag = C_RED "BLOCKED: No water flow" C_RESET;
+      else if(current_temp >= max_temp) diag = C_RED "BLOCKED: 39C safety limit" C_RESET;
+      else if(current_temp >= (target_temp - hysterisys) && current_temp <= (target_temp + hysterisys)) diag = C_YELLOW "Dead zone (hysteresis)" C_RESET;
+      else if(current_temp > target_temp) diag = C_CYAN "Water at target temperature" C_RESET;
+      else if(!isFirstCycle && elapsedSec < (minHeatingCycle / 1000)) diag = C_YELLOW "Waiting (anti-short-cycle)" C_RESET;
     }
     else if (temp_regulation_enabled && heating_enabled) {
-      strDiag = String(C_GREEN) + "HEATING: Heating normally" + C_RESET;
+      diag = C_GREEN "HEATING: Heating normally" C_RESET;
     }
 
     debugPrintln();
-    debugPrintln(String(C_CYAN) + "===================================================" + C_RESET);
-    debugPrintln(String(C_CYAN) + "               SPA INTEX - DASHBOARD               " + C_RESET);
-    debugPrintln(String(C_CYAN) + "===================================================" + C_RESET);
+    debugPrintln(C_CYAN "===================================================" C_RESET);
+    debugPrintln(C_CYAN "               SPA INTEX - DASHBOARD               " C_RESET);
+    debugPrintln(C_CYAN "===================================================" C_RESET);
 
-    debugPrintln("  Temperature  : " + String(C_YELLOW) + String(current_temp, 1) + " C" + C_RESET + " (Target: " + String(C_YELLOW) + String(target_temp, 1) + " C" + C_RESET + ")");
-    debugPrintln("  Thermostat   : [" + formatState(temp_regulation_enabled, "ACTIVE", "INACTIVE") + "]");
-    debugPrintln("  Filtration   : [" + formatState(filtration_enabled, "ACTIVE", "INACTIVE") + "]");
-    debugPrintln("  Bubbles (Jet): [" + formatState(jet_enabled, "ON", "OFF") + "]");
-    debugPrintln("  Heating      : [" + formatState(heating_enabled, "HEATING", "OFF") + "]");
-    debugPrintln("  Water Sensor : F1 [" + formatState(flow_1, "DETECTED", "NO FLOW") + "]  |  F2 [" + formatState(flow_2, "DETECTED", "NO FLOW") + "]");
-    debugPrintln("  Interlocks   : Fuse [" + formatState(!bypass_fuse, "ACTIVE", "BYPASSED") + "]  |  Flow [" + formatState(!bypass_flow, "ACTIVE", "BYPASSED") + "]");
+    snprintf(line, sizeof(line), "  Temperature  : %s%.1f C%s (Target: %s%.1f C%s)", C_YELLOW, current_temp, C_RESET, C_YELLOW, target_temp, C_RESET);
+    debugPrintln(line);
 
-    debugPrintln(String(C_CYAN) + "---------------------------------------------------" + C_RESET);
-    debugPrintln("  Timer        : " + String(elMins) + "m " + String(elSecs) + "s elapsed");
-    debugPrintln("  Cycle lock   : " + strLock);
-    debugPrintln("  Diagnostic   : " + strDiag);
-    debugPrintln(String(C_CYAN) + "===================================================" + C_RESET);
+    fmtState(a, sizeof(a), temp_regulation_enabled, "ACTIVE", "INACTIVE");
+    snprintf(line, sizeof(line), "  Thermostat   : [%s]", a);
+    debugPrintln(line);
+
+    fmtState(a, sizeof(a), filtration_enabled, "ACTIVE", "INACTIVE");
+    snprintf(line, sizeof(line), "  Filtration   : [%s]", a);
+    debugPrintln(line);
+
+    fmtState(a, sizeof(a), jet_enabled, "ON", "OFF");
+    snprintf(line, sizeof(line), "  Bubbles (Jet): [%s]", a);
+    debugPrintln(line);
+
+    fmtState(a, sizeof(a), heating_enabled, "HEATING", "OFF");
+    snprintf(line, sizeof(line), "  Heating      : [%s]", a);
+    debugPrintln(line);
+
+    fmtState(a, sizeof(a), flow_1, "DETECTED", "NO FLOW");
+    fmtState(b, sizeof(b), flow_2, "DETECTED", "NO FLOW");
+    snprintf(line, sizeof(line), "  Water Sensor : F1 [%s]  |  F2 [%s]", a, b);
+    debugPrintln(line);
+
+    fmtState(a, sizeof(a), !bypass_fuse, "ACTIVE", "BYPASSED");
+    fmtState(b, sizeof(b), !bypass_flow, "ACTIVE", "BYPASSED");
+    snprintf(line, sizeof(line), "  Interlocks   : Fuse [%s]  |  Flow [%s]", a, b);
+    debugPrintln(line);
+
+    debugPrintln(C_CYAN "---------------------------------------------------" C_RESET);
+
+    snprintf(line, sizeof(line), "  Timer        : %lum %lus elapsed", elMins, elSecs);
+    debugPrintln(line);
+
+    snprintf(line, sizeof(line), "  Cycle lock   : %s", lock);
+    debugPrintln(line);
+
+    snprintf(line, sizeof(line), "  Diagnostic   : %s", diag);
+    debugPrintln(line);
+
+    debugPrintln(C_CYAN "===================================================" C_RESET);
   }
 
   esp_task_wdt_reset();
