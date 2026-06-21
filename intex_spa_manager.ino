@@ -53,6 +53,7 @@ char mqttPortStr[6] = "1883";
 int  mqttPort = 1883;
 char mqttUser[32] = "";
 char mqttPass[32] = "";
+char otaPass[32] = ""; // mot de passe pour la mise a jour OTA (vide = OTA non protege)
 
 bool shouldSaveConfig = false;
 
@@ -67,11 +68,13 @@ void loadConfig() {
   String s_port   = preferences.getString("mqtt_port", "1883");
   String s_user   = preferences.getString("mqtt_user", "");
   String s_pass   = preferences.getString("mqtt_pass", "");
-  
+  String s_ota    = preferences.getString("ota_pass", "");
+
   strcpy(mqttServer, s_server.c_str());
   strcpy(mqttPortStr, s_port.c_str());
   strcpy(mqttUser, s_user.c_str());
   strcpy(mqttPass, s_pass.c_str());
+  strcpy(otaPass, s_ota.c_str());
   
   mqttPort = atoi(mqttPortStr);
   preferences.end();
@@ -83,6 +86,7 @@ void saveConfig() {
   preferences.putString("mqtt_port", mqttPortStr);
   preferences.putString("mqtt_user", mqttUser);
   preferences.putString("mqtt_pass", mqttPass);
+  preferences.putString("ota_pass", otaPass);
   preferences.end();
   shouldSaveConfig = false;
 }
@@ -223,11 +227,13 @@ void setup() {
   WiFiManagerParameter custom_mqtt_port("port", "Port MQTT", mqttPortStr, 6);
   WiFiManagerParameter custom_mqtt_user("user", "Utilisateur MQTT", mqttUser, 32);
   WiFiManagerParameter custom_mqtt_pass("pass", "Mot de passe MQTT", mqttPass, 32, "type='password'");
+  WiFiManagerParameter custom_ota_pass("otapass", "Mot de passe OTA", otaPass, 32, "type='password'");
 
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_port);
   wm.addParameter(&custom_mqtt_user);
   wm.addParameter(&custom_mqtt_pass);
+  wm.addParameter(&custom_ota_pass);
 
   wm.setConfigPortalTimeout(180);
 
@@ -244,6 +250,7 @@ void setup() {
     strcpy(mqttPortStr, custom_mqtt_port.getValue());
     strcpy(mqttUser, custom_mqtt_user.getValue());
     strcpy(mqttPass, custom_mqtt_pass.getValue());
+    strcpy(otaPass, custom_ota_pass.getValue());
     mqttPort = atoi(mqttPortStr);
 
     if (shouldSaveConfig) {
@@ -526,6 +533,13 @@ void activateOTA() {
     .onError([](ota_error_t error) {
       Serial.printf("Erreur OTA [%u]: ", error);
     });
+
+  ArduinoOTA.setHostname("spa-intex");
+  if(strlen(otaPass) > 0) {
+    ArduinoOTA.setPassword(otaPass);
+  } else {
+    debugPrintln(String(C_RED) + "ATTENTION : OTA non protege (aucun mot de passe configure) !" + C_RESET);
+  }
 
   ArduinoOTA.begin();
 }
