@@ -124,9 +124,12 @@ Place your ESP32 on a breadboard, select the ESP32 board, set the baudrate to 11
 On first boot (or whenever it cannot reach a known WiFi network) the board starts a WiFi access point named **`Spa-Intex-Config`**. Connect to it with a phone or computer and a captive portal opens where you set :
 - your WiFi network and password,
 - the MQTT server address and port (default `1883`),
-- the MQTT username and password (leave empty if your broker has no authentication).
+- the MQTT username and password (leave empty if your broker has no authentication),
+- the **OTA password** that protects over-the-air firmware updates.
 
 These settings are stored permanently in the ESP32 flash. To erase the saved WiFi configuration and force the portal to reopen, **hold the BOOT button (GPIO 0)** while resetting the board.
+
+⚠️ **Set the OTA password.** If you leave it empty, anyone on your network can flash arbitrary firmware to a board that switches 2 kW of mains heaters. The board logs a red warning at start-up while the OTA password is unset.
 
 If the board cannot connect to WiFi within the portal timeout (180 s) it falls back to an **offline mode** : the local heating, filtration and jet logic keeps running, but no remote control is available.
 
@@ -138,22 +141,37 @@ If you have any error message during the start-up you should check your configur
 ### c) Controlling the spa over MQTT
 The board uses MQTT only (the previous HTTP/REST interface has been removed). It publishes its full state as a JSON payload to the **`spa_intex/info`** topic, for example :
 
-`{"flow_1":true,"flow_2":true,"temp_1":21.3,"temp_2":21.8,"target":35.0,"heartbeat":65065,"thermostat":false,"filtration":false,"heater":false,"jet":false,"fuse":false}`
+`{"flow_1":true,"flow_2":true,"temp_1":21.3,"temp_2":21.8,"target":35.0,"heartbeat":65065,"thermostat":false,"filtration":false,"heater":false,"jet":true,"fuse":true}`
+
+In that payload `fuse:true` means the thermal fuse reads intact (safe to heat) and `flow_1/flow_2:true` mean water flow is detected.
 
 Command topics (publish `1` or `0`, or a number for the target) :
 - `spa_intex/target` -> set the target temperature (°C, capped at 39 °C).
 - `spa_intex/thermostat` -> enable/disable the temperature regulation (enabling it also turns filtration on).
 - `spa_intex/filtration` -> enable/disable the filtration (water pump).
 - `spa_intex/jet` -> enable/disable the jet (air pump / bubbles).
-- `spa_intex/heater` -> force the heater on/off (`1` only takes effect if water flow is detected).
+- `spa_intex/heater` -> force the heater on/off (`1` only takes effect if water flow is detected and the thermal fuse is intact).
 - `spa_intex/reset` -> publish `1` to reboot the board after a 10 s delay.
 
 On every successful MQTT connection the board also publishes **Home Assistant MQTT auto-discovery** messages (under the `homeassistant/...` topics), so the temperature sensor, target setpoint, thermostat, filtration and jet appear automatically as a "Spa Intex" device in Home Assistant — no manual entity configuration required.
 
-### d) Removing the old control board
+### d) Safety interlocks and current limiting
+The heating logic enforces several hardware-protection rules. The heater stays off unless **all** of these hold:
+- the thermostat is enabled and the water is below target (with a ±1 °C hysteresis band),
+- **water flow is detected** on the flow sensor (`flow_1`),
+- the **thermal fuse reads intact** (`fuse`),
+- the water temperature is below the 39 °C safety ceiling,
+- the 15-minute anti-short-cycle timer allows the change (bypassed once on the first cycle).
+
+To limit the inrush current (the original board draws up to ~19 A peak with everything starting at once), the firmware reproduces the factory rules: **heater 2 starts only ~20 s after heater 1**, and **heater 2 never runs at the same time as the jet/air pump** (turning the jet on temporarily drops heater 2). The live dashboard (serial / Telnet) shows which interlock is currently blocking the heater.
+
+**Input polarity must match your board.** The active levels are defined at the top of the sketch:
+`#define FLOW_ACTIVE_LEVEL HIGH` (level read when water flows) and `#define FUSE_OK_LEVEL HIGH` (level read when the fuse is intact). They default to *high = active*; if your wiring is inverted, flip these two `#define`s, otherwise the interlocks will read backwards. A disconnected flow or fuse input is treated as "no flow / fuse tripped" and **blocks heating** (fail-safe) — so the thermal-fuse (yellow) and flow connectors must be wired and working for the spa to heat.
+
+### e) Removing the old control board
 First, it is very important to DISCONNECT THE POWER CABLE of the Spa. Remove the four screws securing the spa cover and remove it. Then locate the cover of the control board, remove all the screws and remove the cover. On the control board remove all cable from the lower and upper terminal, from the sensors and from the control panel, then remove the four screws securing the board and remove it.
 
-### e) Installation of the new control board
+### f) Installation of the new control board
 Remove the central plastic pin in order to install the new board into the enclosure and then install the new board using the 4 screws from the old board. Then connect the old cables on the new board. Here is a quick connection guide based on the color of my board (double check it with you board before powering up the spa) :
 
 - Red connector -> Flow 1 connector
