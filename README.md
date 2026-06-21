@@ -8,7 +8,7 @@
 
 **WARNING 3 : This project is still a work in progress, this page is a kind of building log, I haven't finish the board building and installation for the moment. Watch the issues page to see what is working and what is not.**
 
-This project aims to build a replacement for the motherboard of the Intex SSP-20 Spa (it may work with other Intex spa and could be used to build a spa from scratch, but this is not the purpose of this page). My goal was to be able to control the spa remotely and integrate it in my domotic system. I'm using Jeedom https://www.jeedom.com/ as a domotic system, an open-source system, but it should work with other system since the communication part of this board will rely on MQTT protocol and a rest server (based on the Arest library - https://github.com/marcoschwartz/aREST). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
+This project aims to build a replacement for the motherboard of the Intex SSP-20 Spa (it may work with other Intex spa and could be used to build a spa from scratch, but this is not the purpose of this page). My goal was to be able to control the spa remotely and integrate it in my domotic system. The board communicates over the MQTT protocol and publishes Home Assistant MQTT auto-discovery messages, so it integrates out of the box with Home Assistant (and works with any MQTT-based system such as Jeedom https://www.jeedom.com/). The second goal of this project is to improve the reliability of this spa and specificaly to solve a random E95 or E9X error problem. My spa was still under waranty when i started this project so I tried to be as stealth as possible.
 
 ## 1) Intex motherboard reverse engineering
 Below the annotate picture of the motherboard with my understanding of its working principle. Since the card is labeled, everything is pretty straight forward except the descaler system and the pump system (the upper terminal barrier connector on the board).
@@ -111,64 +111,49 @@ Board schematic has been sent to PCBway a chinese PCB prototyping company. https
 The list of component with links to buy them is provided below :
 
 ## 5) How to configure and install the new control board
-### a) Configuring the new board and uploading the code
-Open the lastest *.ino file within the arduino IDE and configure the following variables to your needs.
+### a) Uploading the code and first-boot configuration
+Open the lastest `*.ino` file within the Arduino IDE. You no longer need to edit WiFi or MQTT credentials in the code — they are configured at runtime through a captive WiFi portal (WiFiManager) and saved in the ESP32 flash memory.
 
+The feature flags at the top of the sketch are enabled by default and normally don't need to be changed :
 `const bool wifi_enable = true;`
-`const char* ssid     = "YOUR_WIFI_NETWORK_NAME";`
-`const char* password = "YOUR_WIFI_NETWORK_SECURITY_KEY"`
-
-**Please note that in the current state of developpement you must activate WiFi in order to control the spa. The local commands are not working properly.**
-
-if you want to use mqtt you must set :
 `const bool mqtt_enable = true;`
-`const char* mqttServer = "IP_OF_YOUR_MQTT_SERVER";`
-`const int mqttPort = PORT_OF_YOUR_MQTT_SERVER;`
+`const bool ota_enable = true;`  // WiFi OTA: lets you upload future updates over the air, without opening the case
 
-Additionnaly you could set-up the topic that will be used by the control board :
-- `const char* mqttTopicTemp1 = "spa/temp1";` -> will contain the temperature from the sensor 1 (read only)
-- `const char* mqttTopicTemp2 = "spa/temp2";`-> will contain the temperature from the sensor 2 (read only)
-- `const char* mqttTopicFlow1 = "spa/flow1";`-> will contain the flow detection from the sensor 1 (read only)
-- `const char* mqttTopicFlow2 = "spa/flow2";`-> will contain the flow detection from the sensor 2 (read only)
-- `const char* mqttTopicHeater = "spa/heater";` -> will tell you if the heater is enabled (read only)
-- `const char* mqttTopicHeartBeat = "spa/heartbeat";` -> will contain the heartbeat of the spa, an integer updated at each loop (read-only)
-- `const char* mqttTopicError = "spa/error";` -> will contain the lastest error from the spa (read only)
+Place your ESP32 on a breadboard, select the ESP32 board, set the baudrate to 115200 and upload the code. Once the upload is finished, press the reset button of the board.
 
-- `const char* mqttTopicTarget = "spa/target";` -> will tell you what is the current target temperature (bi-directionnal)
-- `const char* mqttTopicTempRegulation = "spa/temp_regulation";` -> will tell you if the temperature regulation is enabled (bi-directionnal)
-- `const char* mqttTopicFiltration = "spa/filtration";` -> will tell you if the filtration is enabled (bi-directionnal)
-- `const char* mqttTopicJet = "spa/jet";`-> will tell you if jet is enabled (bi-directionnal)
+On first boot (or whenever it cannot reach a known WiFi network) the board starts a WiFi access point named **`Spa-Intex-Config`**. Connect to it with a phone or computer and a captive portal opens where you set :
+- your WiFi network and password,
+- the MQTT server address and port (default `1883`),
+- the MQTT username and password (leave empty if your broker has no authentication).
 
+These settings are stored permanently in the ESP32 flash. To erase the saved WiFi configuration and force the portal to reopen, **hold the BOOT button (GPIO 0)** while resetting the board.
 
-if you want to use WiFi OTA (a very usefull feature that will allow you to upload any update of the code over the air, wihout opening the case) you must set :
-`const bool ota_enable = true;`
+If the board cannot connect to WiFi within the portal timeout (180 s) it falls back to an **offline mode** : the local heating, filtration and jet logic keeps running, but no remote control is available.
 
-Place your ESP32 on a breadboard and upload the code. Once the upload is finish press the reset button of the board.
+### b) Checking the board connection
+Open the serial port monitor of the Arduino IDE and set the baudrate to 115200. You should see the start-up sequence and the IP of your board on the WiFi network. Once connected, you can also open a **Telnet** session to that IP (port 23) to watch the live dashboard remotely — it prints the temperature, target, thermostat/filtration/jet/heater states and the anti-short-cycle timer every few seconds.
 
-### a) Checking the board WiFi connection
-Open the serial port monitor of the Arduino IDE and set the baudrate to 115200. You should see the start-up and the IP of your board on the WiFi network.
+If you have any error message during the start-up you should check your configuration in the WiFi portal.
 
-If you have any error message during the start-up you should check your board configuration.
+### c) Controlling the spa over MQTT
+The board uses MQTT only (the previous HTTP/REST interface has been removed). It publishes its full state as a JSON payload to the **`spa_intex/info`** topic, for example :
 
-Once the board is connected to the wifi network you should open the following URL : `http://IP-OF-YOUR-BOARD`.You should get a JSON chain giving you the current state of the board. It should looks like this :
+`{"flow_1":true,"flow_2":true,"temp_1":21.3,"temp_2":21.8,"target":35.0,"heartbeat":65065,"thermostat":false,"filtration":false,"heater":false,"jet":false,"fuse":false}`
 
-`{"variables": {"flow1": false, "flow2": false, "temp1": 0.00, "temp2": 0.00, "heartbeat": 65065, "target_temp": 20.00, "filtration": false, "heating": false, "temp_regulation": false, "jet": false}, "id": "", "name": "", "hardware": "esp32", "connected": true}`
+Command topics (publish `1` or `0`, or a number for the target) :
+- `spa_intex/target` -> set the target temperature (°C, capped at 39 °C).
+- `spa_intex/thermostat` -> enable/disable the temperature regulation (enabling it also turns filtration on).
+- `spa_intex/filtration` -> enable/disable the filtration (water pump).
+- `spa_intex/jet` -> enable/disable the jet (air pump / bubbles).
+- `spa_intex/heater` -> force the heater on/off (`1` only takes effect if water flow is detected).
+- `spa_intex/reset` -> publish `1` to reboot the board after a 10 s delay.
 
-If you have set-up the mqtt server
+On every successful MQTT connection the board also publishes **Home Assistant MQTT auto-discovery** messages (under the `homeassistant/...` topics), so the temperature sensor, target setpoint, thermostat, filtration and jet appear automatically as a "Spa Intex" device in Home Assistant — no manual entity configuration required.
 
-### b) Trying to send some commands
-Try to connect to : `http://IP-OF-YOUR-BOARD/filtration?param=1`. This is the command to activate the filtration. You should receive a response of this form : `{"return_value": 0, "id": "", "name": "", "hardware": "esp32", "connected": true}`. You can turn it off by sending `http://IP-OF-YOUR-BOARD/filtration?param=0`.
-
-The list of the available command is :
-- `http://IP-OF-YOUR-BOARD/filtration?param=0` or `http://IP-OF-YOUR-BOARD/filtration?param=1` -> will enable or disable the filtration.
-- `http://IP-OF-YOUR-BOARD/jet?param=0` or `http://IP-OF-YOUR-BOARD/jet?param=1` -> will enable or disable the jet.
-- `http://192.168.100.75/temp_regulation?param=0` or `http://192.168.100.75/temp_regulation?param=0`  -> will enable or disable the temperature regulation.
-- `http://192.168.100.75/target_temp?param=X` -> will set the target temperature.
-
-### b) Removing the old control board
+### d) Removing the old control board
 First, it is very important to DISCONNECT THE POWER CABLE of the Spa. Remove the four screws securing the spa cover and remove it. Then locate the cover of the control board, remove all the screws and remove the cover. On the control board remove all cable from the lower and upper terminal, from the sensors and from the control panel, then remove the four screws securing the board and remove it.
 
-### c) Installation of the new control board
+### e) Installation of the new control board
 Remove the central plastic pin in order to install the new board into the enclosure and then install the new board using the 4 screws from the old board. Then connect the old cables on the new board. Here is a quick connection guide based on the color of my board (double check it with you board before powering up the spa) :
 
 - Red connector -> Flow 1 connector
