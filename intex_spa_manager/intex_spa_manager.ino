@@ -109,6 +109,8 @@ const char* mqttTopicHeaterForce = "spa_intex/heater";
 const char* mqttTopicInfo = "spa_intex/info";
 const char* mqttTopicReset = "spa_intex/reset";
 const char* mqttTopicError = "spa_intex/error";
+const char* mqttTopicBypassFlow = "spa_intex/bypass_flow";
+const char* mqttTopicBypassFuse = "spa_intex/bypass_fuse";
 
 // Configuration des broches
 #define HEATER_1_PIN 18 
@@ -146,6 +148,8 @@ bool filtration_enabled = false;
 bool jet_enabled = false;
 bool temp_regulation_enabled = false;
 bool heating_enabled = false;
+bool bypass_flow = false; // override de la securite "debit d'eau" (remis a 0 au boot)
+bool bypass_fuse = false; // override de la securite "fusible thermique" (remis a 0 au boot)
 
 float hysterisys = 1.0; 
 int max_temp = 39;
@@ -338,8 +342,8 @@ void loop() {
 
     String strDiag = String(C_GREEN) + "Fonctionnement normal" + C_RESET;
     if(temp_regulation_enabled && !heating_enabled) {
-      if(!fuse) strDiag = String(C_RED) + "BLOCAGE : Fusible thermique declenche" + C_RESET;
-      else if(!flow_1) strDiag = String(C_RED) + "BLOCAGE : Capteur d'eau a 0" + C_RESET;
+      if(!fuse && !bypass_fuse) strDiag = String(C_RED) + "BLOCAGE : Fusible thermique declenche" + C_RESET;
+      else if(!flow_1 && !bypass_flow) strDiag = String(C_RED) + "BLOCAGE : Capteur d'eau a 0" + C_RESET;
       else if(current_temp >= max_temp) strDiag = String(C_RED) + "BLOCAGE : Securite 39C" + C_RESET;
       else if(current_temp >= (target_temp - hysterisys) && current_temp <= (target_temp + hysterisys)) strDiag = String(C_YELLOW) + "Zone morte (Hysteresis)" + C_RESET;
       else if(current_temp > target_temp) strDiag = String(C_CYAN) + "Eau a bonne temperature" + C_RESET;
@@ -360,6 +364,7 @@ void loop() {
     debugPrintln("  Bulles (Jet) : [" + formatState(jet_enabled, "ACTIVES", "INACTIVES") + "]");
     debugPrintln("  Chauffage    : [" + formatState(heating_enabled, "EN CHAUFFE", "ETEINT") + "]");
     debugPrintln("  Capteurs Eau : F1 [" + formatState(flow_1, "DÉTECTÉ", "PAS DE DÉBIT") + "]  |  F2 [" + formatState(flow_2, "DÉTECTÉ", "PAS DE DÉBIT") + "]");
+    debugPrintln("  Securites    : Fusible [" + formatState(!bypass_fuse, "ACTIVE", "CONTOURNEE") + "]  |  Debit [" + formatState(!bypass_flow, "ACTIVE", "CONTOURNEE") + "]");
     
     debugPrintln(String(C_CYAN) + "---------------------------------------------------" + C_RESET);
     debugPrintln("  Minuteur     : " + String(elMins) + "m " + String(elSecs) + "s ecoules");
@@ -403,7 +408,17 @@ void publishMQTTDiscovery() {
   String topicJet = "homeassistant/switch/spa_intex/jet/config";
   String payloadJet = "{\"name\":\"Spa Bulles\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.jet else '0' }}\",\"cmd_t\":\"spa_intex/jet\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"uniq_id\":\"spa_jet\"," + deviceStr + "}";
   MQTTclient.publish(topicJet.c_str(), payloadJet.c_str(), true);
-  
+
+  // 6. Bypass securite debit d'eau (categorie configuration)
+  String topicBpFlow = "homeassistant/switch/spa_intex/bypass_flow/config";
+  String payloadBpFlow = "{\"name\":\"Spa Bypass Debit\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.bypass_flow else '0' }}\",\"cmd_t\":\"spa_intex/bypass_flow\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"ent_cat\":\"config\",\"uniq_id\":\"spa_bypass_flow\"," + deviceStr + "}";
+  MQTTclient.publish(topicBpFlow.c_str(), payloadBpFlow.c_str(), true);
+
+  // 7. Bypass securite fusible thermique (categorie configuration)
+  String topicBpFuse = "homeassistant/switch/spa_intex/bypass_fuse/config";
+  String payloadBpFuse = "{\"name\":\"Spa Bypass Fusible\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.bypass_fuse else '0' }}\",\"cmd_t\":\"spa_intex/bypass_fuse\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"ent_cat\":\"config\",\"uniq_id\":\"spa_bypass_fuse\"," + deviceStr + "}";
+  MQTTclient.publish(topicBpFuse.c_str(), payloadBpFuse.c_str(), true);
+
   debugPrintln(String(C_GREEN) + "Auto-Decouverte MQTT envoyee avec succes !" + C_RESET);
 }
 
@@ -433,6 +448,8 @@ void connect_mqtt() {
       MQTTclient.subscribe(mqttTopicTempRegulation);
       MQTTclient.subscribe(mqttTopicReset);
       MQTTclient.subscribe(mqttTopicHeaterForce);
+      MQTTclient.subscribe(mqttTopicBypassFlow);
+      MQTTclient.subscribe(mqttTopicBypassFuse);
     } else {
       debugPrint(String(C_RED) + "Erreur : Code etat MQTT = " + C_RESET);
       debugPrintln(MQTTclient.state());
@@ -455,7 +472,7 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
     request_mqtt_update = true;
   }
   else if(strcmp(topic, mqttTopicHeaterForce) == 0) {
-    if(message == "1" && flow_1 && fuse) {
+    if(message == "1" && (flow_1 || bypass_flow) && (fuse || bypass_fuse)) {
       // On amorce la resistance 1 ; la resistance 2 est geree par activate_heating
       // (decalage de demarrage + exclusion avec les bulles)
       digitalWrite(HEATER_1_PIN, HIGH);
@@ -490,10 +507,20 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
   else if(strcmp(topic, mqttTopicTempRegulation) == 0) {
     if(message == "1") {
       temp_regulation_enabled = true;
-      filtration_enabled = true; 
+      filtration_enabled = true;
     } else {
       temp_regulation_enabled = false;
     }
+    request_mqtt_update = true;
+  }
+  else if(strcmp(topic, mqttTopicBypassFlow) == 0) {
+    bypass_flow = (message == "1");
+    if(bypass_flow) debugPrintln(String(C_RED) + "ATTENTION : securite DEBIT D'EAU contournee !" + C_RESET);
+    request_mqtt_update = true;
+  }
+  else if(strcmp(topic, mqttTopicBypassFuse) == 0) {
+    bypass_fuse = (message == "1");
+    if(bypass_fuse) debugPrintln(String(C_RED) + "ATTENTION : securite FUSIBLE THERMIQUE contournee !" + C_RESET);
     request_mqtt_update = true;
   }
 }
@@ -603,7 +630,7 @@ void activate_filtration(bool state) {
 }
 
 void activate_heating(bool state) {
-  if(state && flow_1 && fuse) {
+  if(state && (flow_1 || bypass_flow) && (fuse || bypass_fuse)) {
     if(!heating_enabled) {
       request_mqtt_update = true;
       heater1OnTime = heartbeat; // demarrage du minuteur de decalage
@@ -623,7 +650,7 @@ void activate_heating(bool state) {
 }
 
 bool must_heat() {
-  if(!temp_regulation_enabled || !flow_1 || !fuse || current_temp >= max_temp) {
+  if(!temp_regulation_enabled || (!flow_1 && !bypass_flow) || (!fuse && !bypass_fuse) || current_temp >= max_temp) {
     if(heating_enabled) {
        lastHeatingStateChange = heartbeat; 
     }
@@ -667,6 +694,8 @@ void update_mqtt_server() {
   myData["heater"] = (bool) heating_enabled;
   myData["jet"] = (bool) jet_enabled;
   myData["fuse"] = (bool) fuse;
+  myData["bypass_flow"] = (bool) bypass_flow;
+  myData["bypass_fuse"] = (bool) bypass_fuse;
 
   String jsonString = JSON.stringify(myData);
   sendStringValueOverMQTT(jsonString, mqttTopicInfo);

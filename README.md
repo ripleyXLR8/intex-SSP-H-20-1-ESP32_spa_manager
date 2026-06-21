@@ -141,7 +141,7 @@ If you have any error message during the start-up you should check your configur
 ### c) Controlling the spa over MQTT
 The board uses MQTT only (the previous HTTP/REST interface has been removed). It publishes its full state as a JSON payload to the **`spa_intex/info`** topic, for example :
 
-`{"flow_1":true,"flow_2":true,"temp_1":21.3,"temp_2":21.8,"target":35.0,"heartbeat":65065,"thermostat":false,"filtration":false,"heater":false,"jet":true,"fuse":true}`
+`{"flow_1":true,"flow_2":true,"temp_1":21.3,"temp_2":21.8,"target":35.0,"heartbeat":65065,"thermostat":false,"filtration":false,"heater":false,"jet":true,"fuse":true,"bypass_flow":false,"bypass_fuse":false}`
 
 In that payload `fuse:true` means the thermal fuse reads intact (safe to heat) and `flow_1/flow_2:true` mean water flow is detected.
 
@@ -152,6 +152,8 @@ Command topics (publish `1` or `0`, or a number for the target) :
 - `spa_intex/jet` -> enable/disable the jet (air pump / bubbles).
 - `spa_intex/heater` -> force the heater on/off (`1` only takes effect if water flow is detected and the thermal fuse is intact).
 - `spa_intex/reset` -> publish `1` to reboot the board after a 10 s delay.
+- `spa_intex/bypass_flow` -> override the water-flow interlock (see safety section below).
+- `spa_intex/bypass_fuse` -> override the thermal-fuse interlock (see safety section below).
 
 On every successful MQTT connection the board also publishes **Home Assistant MQTT auto-discovery** messages (under the `homeassistant/...` topics), so the temperature sensor, target setpoint, thermostat, filtration and jet appear automatically as a "Spa Intex" device in Home Assistant — no manual entity configuration required.
 
@@ -167,6 +169,15 @@ To limit the inrush current (the original board draws up to ~19 A peak with ever
 
 **Input polarity must match your board.** The active levels are defined at the top of the sketch:
 `#define FLOW_ACTIVE_LEVEL HIGH` (level read when water flows) and `#define FUSE_OK_LEVEL HIGH` (level read when the fuse is intact). They default to *high = active*; if your wiring is inverted, flip these two `#define`s, otherwise the interlocks will read backwards. A disconnected flow or fuse input is treated as "no flow / fuse tripped" and **blocks heating** (fail-safe) — so the thermal-fuse (yellow) and flow connectors must be wired and working for the spa to heat.
+
+#### Bypassing a broken sensor
+If a flow sensor or the thermal fuse is faulty and you knowingly want to keep heating until you can replace it, two MQTT overrides let you bypass the interlock without touching the code:
+- `spa_intex/bypass_flow` -> publish `1` to ignore the water-flow check, `0` to restore it.
+- `spa_intex/bypass_fuse` -> publish `1` to ignore the thermal-fuse check, `0` to restore it.
+
+Both are exposed as switches in the **Configuration** section of the Home Assistant device ("Spa Bypass Debit" / "Spa Bypass Fusible"), reported in the `info` payload (`bypass_flow` / `bypass_fuse`), and shown on the serial/Telnet dashboard (`Securites : Fusible [ACTIVE/CONTOURNEE] | Debit [...]`) with a red warning when engaged.
+
+⚠️ **A bypass resets to OFF on every reboot/power-cycle** — it is deliberately not persisted, so cycling power always restores full safety. Bypassing the thermal fuse removes overheat protection; the only remaining backstop is the 39 °C software ceiling on the regulation sensor. Use these overrides only as a temporary measure and never leave the spa unattended while a bypass is active.
 
 ### e) Removing the old control board
 First, it is very important to DISCONNECT THE POWER CABLE of the Spa. Remove the four screws securing the spa cover and remove it. Then locate the cover of the control board, remove all the screws and remove the cover. On the control board remove all cable from the lower and upper terminal, from the sensors and from the control panel, then remove the four screws securing the board and remove it.
