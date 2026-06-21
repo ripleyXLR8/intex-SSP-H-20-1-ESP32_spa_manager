@@ -32,6 +32,10 @@ const unsigned long mqtt_update_interval = 20000;
 // Parametres du cycle de chauffe (Anti-Court-Cycle)
 unsigned long lastHeatingStateChange = 0;
 const unsigned long minHeatingCycle = 15 * 60 * 1000; // 15 minutes
+
+// Limitation du courant d'appel : decalage de demarrage entre les deux resistances
+unsigned long heater1OnTime = 0;
+const unsigned long heaterStageDelay = 20000; // 20s entre resistance 1 et 2 (cf. carte d'origine)
 bool isFirstCycle = true; 
 
 // Variables pour le reset non-bloquant
@@ -445,10 +449,11 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
   }
   else if(strcmp(topic, mqttTopicHeaterForce) == 0) {
     if(message == "1" && flow_1 && fuse) {
+      // On amorce la resistance 1 ; la resistance 2 est geree par activate_heating
+      // (decalage de demarrage + exclusion avec les bulles)
       digitalWrite(HEATER_1_PIN, HIGH);
-      delay(500); 
-      digitalWrite(HEATER_2_PIN, HIGH);
       heating_enabled = true;
+      heater1OnTime = millis();
       lastHeatingStateChange = millis();
       isFirstCycle = false;
     } else {
@@ -585,10 +590,16 @@ void activate_filtration(bool state) {
 
 void activate_heating(bool state) {
   if(state && flow_1 && fuse) {
-    if(!heating_enabled) request_mqtt_update = true;
+    if(!heating_enabled) {
+      request_mqtt_update = true;
+      heater1OnTime = heartbeat; // demarrage du minuteur de decalage
+    }
     heating_enabled = true;
     digitalWrite(HEATER_1_PIN, HIGH);
-    digitalWrite(HEATER_2_PIN, HIGH);
+
+    // Resistance 2 : seulement apres le decalage de demarrage ET jamais en meme temps que les bulles
+    bool heater2Allowed = (heartbeat - heater1OnTime >= heaterStageDelay) && !jet_enabled;
+    digitalWrite(HEATER_2_PIN, heater2Allowed ? HIGH : LOW);
   } else {
     if(heating_enabled) request_mqtt_update = true;
     heating_enabled = false;
