@@ -2,19 +2,19 @@
 #include <PubSubClient.h>
 #include <ArduinoOTA.h>
 #include <Arduino_JSON.h>
-#include <esp_task_wdt.h> // Bibliotheque native pour le Watchdog
-#include <WiFiManager.h>  // Bibliotheque pour le portail captif WiFi
-#include <Preferences.h>  // Bibliotheque pour sauvegarder les parametres MQTT en memoire
+#include <esp_task_wdt.h> // Native library for the Watchdog
+#include <WiFiManager.h>  // Library for the WiFi captive portal
+#include <Preferences.h>  // Library to persist MQTT settings in flash
 
-// Configuration du Watchdog
-#define WDT_TIMEOUT 8 // Temps de sursis en secondes avant reboot force
+// Watchdog configuration
+#define WDT_TIMEOUT 8 // Grace period in seconds before a forced reboot
 
-// Configuration des fonctionnalites
+// Feature configuration
 const bool wifi_enable = true;
 const bool mqtt_enable = true;
 const bool ota_enable = true;
 
-// --- COULEURS ANSI POUR LE TERMINAL ---
+// --- ANSI COLORS FOR THE TERMINAL ---
 #define C_RESET   "\033[0m"
 #define C_RED     "\033[1;31m"
 #define C_GREEN   "\033[1;32m"
@@ -22,29 +22,29 @@ const bool ota_enable = true;
 #define C_CYAN    "\033[1;36m"
 #define C_MAGENTA "\033[1;35m"
 
-// Timers et intervalles
+// Timers and intervals
 unsigned long previousHeartbeat = 0;
 unsigned long previousSensorRead = 0;
 unsigned long heartbeat;
-const unsigned long sensor_read_interval = 500; 
+const unsigned long sensor_read_interval = 500;
 const unsigned long mqtt_update_interval = 20000;
 
-// Parametres du cycle de chauffe (Anti-Court-Cycle)
+// Heating cycle parameters (anti-short-cycle)
 unsigned long lastHeatingStateChange = 0;
 const unsigned long minHeatingCycle = 15 * 60 * 1000; // 15 minutes
 
-// Limitation du courant d'appel : decalage de demarrage entre les deux resistances
+// Inrush current limiting: startup stagger between the two heating elements
 unsigned long heater1OnTime = 0;
-const unsigned long heaterStageDelay = 20000; // 20s entre resistance 1 et 2 (cf. carte d'origine)
-bool isFirstCycle = true; 
+const unsigned long heaterStageDelay = 20000; // 20s between heater 1 and 2 (per the original board)
+bool isFirstCycle = true;
 
-// Variables pour le reset non-bloquant
+// Variables for the non-blocking reset
 bool resetRequested = false;
 unsigned long resetTimer = 0;
 const unsigned long resetDelay = 10000;
 
 // ==========================================
-// CONFIGURATION DYNAMIQUE (WIFIMANAGER)
+// DYNAMIC CONFIGURATION (WIFIMANAGER)
 // ==========================================
 Preferences preferences;
 
@@ -53,12 +53,12 @@ char mqttPortStr[6] = "1883";
 int  mqttPort = 1883;
 char mqttUser[32] = "";
 char mqttPass[32] = "";
-char otaPass[32] = ""; // mot de passe pour la mise a jour OTA (vide = OTA non protege)
+char otaPass[32] = ""; // password for OTA updates (empty = OTA unprotected)
 
 bool shouldSaveConfig = false;
 
 void saveConfigCallback() {
-  Serial.println("Changement de configuration detecte. Sauvegarde demandee.");
+  Serial.println("Configuration change detected. Save requested.");
   shouldSaveConfig = true;
 }
 
@@ -75,7 +75,7 @@ void loadConfig() {
   strcpy(mqttUser, s_user.c_str());
   strcpy(mqttPass, s_pass.c_str());
   strcpy(otaPass, s_ota.c_str());
-  
+
   mqttPort = atoi(mqttPortStr);
   preferences.end();
 }
@@ -92,15 +92,15 @@ void saveConfig() {
 }
 
 // ==========================================
-// VARIABLES D'ETAT
+// STATE VARIABLES
 // ==========================================
 bool request_mqtt_update = false;
 
-// Serveur Telnet pour le Debug OTA
+// Telnet server for OTA debug
 WiFiServer telnetServer(23);
 WiFiClient telnetClient;
 
-// Liste des Topics MQTT
+// MQTT topic list
 const char* mqttTopicJet = "spa_intex/jet";
 const char* mqttTopicFiltration = "spa_intex/filtration";
 const char* mqttTopicTarget = "spa_intex/target";
@@ -112,26 +112,26 @@ const char* mqttTopicError = "spa_intex/error";
 const char* mqttTopicBypassFlow = "spa_intex/bypass_flow";
 const char* mqttTopicBypassFuse = "spa_intex/bypass_fuse";
 
-// Configuration des broches
-#define HEATER_1_PIN 18 
-#define HEATER_2_PIN 19 
-#define JET_PIN 5 
-#define PUMP_PIN 17 
-#define FLOW_1_PIN 23 
-#define FLOW_2_PIN 22 
-#define TEMP_1_PIN 34 
-#define TEMP_2_PIN 35 
+// Pin configuration
+#define HEATER_1_PIN 18
+#define HEATER_2_PIN 19
+#define JET_PIN 5
+#define PUMP_PIN 17
+#define FLOW_1_PIN 23
+#define FLOW_2_PIN 22
+#define TEMP_1_PIN 34
+#define TEMP_2_PIN 35
 #define TEMP_FUSE_PIN 32
 
-// Niveau logique des entrees de securite (a verifier selon le cablage de la carte)
-#define FLOW_ACTIVE_LEVEL HIGH   // niveau lu quand un debit d'eau est present
-#define FUSE_OK_LEVEL HIGH       // niveau lu quand le fusible thermique est intact
+// Logic level of the safety inputs (verify against the board wiring)
+#define FLOW_ACTIVE_LEVEL HIGH   // level read when water flow is present
+#define FUSE_OK_LEVEL HIGH       // level read when the thermal fuse is intact
 #define SERIESRESISTOR_TEMP_1 9980
-#define SERIESRESISTOR_TEMP_2 9980 
+#define SERIESRESISTOR_TEMP_2 9980
 
-const int num_samples = 20; 
-const float smoothing_factor = 0.2; 
-bool first_reading = true; 
+const int num_samples = 20;
+const float smoothing_factor = 0.2;
+bool first_reading = true;
 
 WiFiClient espClient;
 PubSubClient MQTTclient(espClient);
@@ -148,14 +148,14 @@ bool filtration_enabled = false;
 bool jet_enabled = false;
 bool temp_regulation_enabled = false;
 bool heating_enabled = false;
-bool bypass_flow = false; // override de la securite "debit d'eau" (remis a 0 au boot)
-bool bypass_fuse = false; // override de la securite "fusible thermique" (remis a 0 au boot)
+bool bypass_flow = false; // override of the "water flow" interlock (reset to 0 on boot)
+bool bypass_fuse = false; // override of the "thermal fuse" interlock (reset to 0 on boot)
 
-float hysterisys = 1.0; 
+float hysterisys = 1.0;
 int max_temp = 39;
 
 // ==========================================
-// FONCTIONS DE DEBUG OTA
+// OTA DEBUG FUNCTIONS
 // ==========================================
 template <typename T>
 void debugPrint(T msg) {
@@ -185,9 +185,9 @@ void handleTelnet() {
     if (!telnetClient || !telnetClient.connected()) {
       if (telnetClient) telnetClient.stop();
       telnetClient = telnetServer.available();
-      // On efface l'ecran a la connexion (ANSI Clear Screen)
+      // Clear the screen on connect (ANSI Clear Screen)
       telnetClient.print("\033[2J\033[H");
-      telnetClient.println(String(C_GREEN) + "=== CONNEXION DEBUG OTA ETABLIE ===" + C_RESET);
+      telnetClient.println(String(C_GREEN) + "=== OTA DEBUG CONNECTION ESTABLISHED ===" + C_RESET);
     } else {
       telnetServer.available().stop();
     }
@@ -199,11 +199,11 @@ String formatState(bool state, String tTrue, String tFalse) {
 }
 
 // ==========================================
-// INITIALISATION (SETUP)
+// SETUP
 // ==========================================
 void setup() {
   Serial.begin(115200);
-  
+
   pinMode(HEATER_1_PIN, OUTPUT);
   pinMode(HEATER_2_PIN, OUTPUT);
   pinMode(JET_PIN, OUTPUT);
@@ -217,21 +217,21 @@ void setup() {
 
   // --- WIFIMANAGER ---
   loadConfig();
-  
+
   WiFiManager wm;
   wm.setSaveConfigCallback(saveConfigCallback);
 
-  pinMode(0, INPUT_PULLUP); // GPIO 0 = Bouton BOOT de l'ESP32
-  if (digitalRead(0) == LOW) { 
-    Serial.println("Bouton BOOT maintenu : Effacement du WiFi !");
-    wm.resetSettings(); 
+  pinMode(0, INPUT_PULLUP); // GPIO 0 = ESP32 BOOT button
+  if (digitalRead(0) == LOW) {
+    Serial.println("BOOT button held: erasing WiFi settings!");
+    wm.resetSettings();
   }
 
-  WiFiManagerParameter custom_mqtt_server("server", "Serveur MQTT", mqttServer, 40);
-  WiFiManagerParameter custom_mqtt_port("port", "Port MQTT", mqttPortStr, 6);
-  WiFiManagerParameter custom_mqtt_user("user", "Utilisateur MQTT", mqttUser, 32);
-  WiFiManagerParameter custom_mqtt_pass("pass", "Mot de passe MQTT", mqttPass, 32, "type='password'");
-  WiFiManagerParameter custom_ota_pass("otapass", "Mot de passe OTA", otaPass, 32, "type='password'");
+  WiFiManagerParameter custom_mqtt_server("server", "MQTT Server", mqttServer, 40);
+  WiFiManagerParameter custom_mqtt_port("port", "MQTT Port", mqttPortStr, 6);
+  WiFiManagerParameter custom_mqtt_user("user", "MQTT User", mqttUser, 32);
+  WiFiManagerParameter custom_mqtt_pass("pass", "MQTT Password", mqttPass, 32, "type='password'");
+  WiFiManagerParameter custom_ota_pass("otapass", "OTA Password", otaPass, 32, "type='password'");
 
   wm.addParameter(&custom_mqtt_server);
   wm.addParameter(&custom_mqtt_port);
@@ -241,13 +241,13 @@ void setup() {
 
   wm.setConfigPortalTimeout(180);
 
-  Serial.println("Tentative de connexion WiFi...");
-  
+  Serial.println("Attempting WiFi connection...");
+
   if (!wm.autoConnect("Spa-Intex-Config")) {
-    Serial.println("Echec connexion WiFi -> Mode Hors-Ligne active");
+    Serial.println("WiFi connection failed -> Offline mode enabled");
     offline_mode = true;
   } else {
-    Serial.println("WiFi connecte !");
+    Serial.println("WiFi connected!");
     offline_mode = false;
 
     strcpy(mqttServer, custom_mqtt_server.getValue());
@@ -259,12 +259,12 @@ void setup() {
 
     if (shouldSaveConfig) {
       saveConfig();
-      Serial.println("Nouvelle configuration MQTT sauvegardee.");
+      Serial.println("New MQTT configuration saved.");
     }
   }
 
   if(!offline_mode) {
-    telnetServer.begin(); 
+    telnetServer.begin();
     if(mqtt_enable) connect_mqtt();
     if(ota_enable) activateOTA();
   }
@@ -273,24 +273,24 @@ void setup() {
 
   esp_task_wdt_config_t wdt_config = {
     .timeout_ms = WDT_TIMEOUT * 1000,
-    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1, 
+    .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,
     .trigger_panic = true
   };
-  esp_task_wdt_init(&wdt_config); 
-  esp_task_wdt_add(NULL); 
-  debugPrintln(String(C_GREEN) + "Watchdog active avec succes !" + C_RESET);
+  esp_task_wdt_init(&wdt_config);
+  esp_task_wdt_add(NULL);
+  debugPrintln(String(C_GREEN) + "Watchdog enabled successfully!" + C_RESET);
 }
 
 // ==========================================
-// BOUCLE PRINCIPALE (LOOP)
+// MAIN LOOP
 // ==========================================
 void loop() {
   heartbeat = millis();
-  
+
   handleTelnet();
 
   if (resetRequested && (heartbeat - resetTimer >= resetDelay)) {
-    debugPrintln(String(C_YELLOW) + "Reboot de l'ESP32 en cours..." + C_RESET);
+    debugPrintln(String(C_YELLOW) + "Rebooting the ESP32..." + C_RESET);
     delay(500);
     ESP.restart();
   }
@@ -302,7 +302,7 @@ void loop() {
   if(mqtt_enable) {
     if (!MQTTclient.connected() && !offline_mode) {
       static unsigned long lastMqttRetry = 0;
-      if (heartbeat - lastMqttRetry > 5000) { 
+      if (heartbeat - lastMqttRetry > 5000) {
         lastMqttRetry = heartbeat;
         connect_mqtt();
       }
@@ -322,7 +322,7 @@ void loop() {
       update_mqtt_server();
     }
   }
-  
+
   update_relay_state();
 
   static unsigned long lastDebugInfo = 0;
@@ -332,116 +332,116 @@ void loop() {
     unsigned long elapsedSec = (heartbeat - lastHeatingStateChange) / 1000;
     unsigned long elMins = elapsedSec / 60;
     unsigned long elSecs = elapsedSec % 60;
-    
-    String strLock = String(C_GREEN) + "DEVERROUILLE" + C_RESET;
+
+    String strLock = String(C_GREEN) + "UNLOCKED" + C_RESET;
     if (elapsedSec < (minHeatingCycle / 1000)) {
       unsigned long remSec = (minHeatingCycle / 1000) - elapsedSec;
-      strLock = String(C_YELLOW) + String(remSec / 60) + "m " + String(remSec % 60) + "s restants" + C_RESET;
+      strLock = String(C_YELLOW) + String(remSec / 60) + "m " + String(remSec % 60) + "s remaining" + C_RESET;
     }
-    if (isFirstCycle) strLock += " (Ignore pour 1er cycle)";
+    if (isFirstCycle) strLock += " (ignored for 1st cycle)";
 
-    String strDiag = String(C_GREEN) + "Fonctionnement normal" + C_RESET;
+    String strDiag = String(C_GREEN) + "Normal operation" + C_RESET;
     if(temp_regulation_enabled && !heating_enabled) {
-      if(!fuse && !bypass_fuse) strDiag = String(C_RED) + "BLOCAGE : Fusible thermique declenche" + C_RESET;
-      else if(!flow_1 && !bypass_flow) strDiag = String(C_RED) + "BLOCAGE : Capteur d'eau a 0" + C_RESET;
-      else if(current_temp >= max_temp) strDiag = String(C_RED) + "BLOCAGE : Securite 39C" + C_RESET;
-      else if(current_temp >= (target_temp - hysterisys) && current_temp <= (target_temp + hysterisys)) strDiag = String(C_YELLOW) + "Zone morte (Hysteresis)" + C_RESET;
-      else if(current_temp > target_temp) strDiag = String(C_CYAN) + "Eau a bonne temperature" + C_RESET;
-      else if(!isFirstCycle && elapsedSec < (minHeatingCycle / 1000)) strDiag = String(C_YELLOW) + "Attente Anti-Court-Cycle" + C_RESET;
+      if(!fuse && !bypass_fuse) strDiag = String(C_RED) + "BLOCKED: Thermal fuse tripped" + C_RESET;
+      else if(!flow_1 && !bypass_flow) strDiag = String(C_RED) + "BLOCKED: No water flow" + C_RESET;
+      else if(current_temp >= max_temp) strDiag = String(C_RED) + "BLOCKED: 39C safety limit" + C_RESET;
+      else if(current_temp >= (target_temp - hysterisys) && current_temp <= (target_temp + hysterisys)) strDiag = String(C_YELLOW) + "Dead zone (hysteresis)" + C_RESET;
+      else if(current_temp > target_temp) strDiag = String(C_CYAN) + "Water at target temperature" + C_RESET;
+      else if(!isFirstCycle && elapsedSec < (minHeatingCycle / 1000)) strDiag = String(C_YELLOW) + "Waiting (anti-short-cycle)" + C_RESET;
     }
     else if (temp_regulation_enabled && heating_enabled) {
-      strDiag = String(C_GREEN) + "ETAT CHAUFFAGE : En chauffe normalement" + C_RESET;
+      strDiag = String(C_GREEN) + "HEATING: Heating normally" + C_RESET;
     }
 
     debugPrintln();
     debugPrintln(String(C_CYAN) + "===================================================" + C_RESET);
-    debugPrintln(String(C_CYAN) + "           SPA INTEX - TABLEAU DE BORD             " + C_RESET);
+    debugPrintln(String(C_CYAN) + "               SPA INTEX - DASHBOARD               " + C_RESET);
     debugPrintln(String(C_CYAN) + "===================================================" + C_RESET);
-    
-    debugPrintln("  Temperature  : " + String(C_YELLOW) + String(current_temp, 1) + " C" + C_RESET + " (Cible: " + String(C_YELLOW) + String(target_temp, 1) + " C" + C_RESET + ")");
-    debugPrintln("  Thermostat   : [" + formatState(temp_regulation_enabled, "ACTIF", "INACTIF") + "]");
+
+    debugPrintln("  Temperature  : " + String(C_YELLOW) + String(current_temp, 1) + " C" + C_RESET + " (Target: " + String(C_YELLOW) + String(target_temp, 1) + " C" + C_RESET + ")");
+    debugPrintln("  Thermostat   : [" + formatState(temp_regulation_enabled, "ACTIVE", "INACTIVE") + "]");
     debugPrintln("  Filtration   : [" + formatState(filtration_enabled, "ACTIVE", "INACTIVE") + "]");
-    debugPrintln("  Bulles (Jet) : [" + formatState(jet_enabled, "ACTIVES", "INACTIVES") + "]");
-    debugPrintln("  Chauffage    : [" + formatState(heating_enabled, "EN CHAUFFE", "ETEINT") + "]");
-    debugPrintln("  Capteurs Eau : F1 [" + formatState(flow_1, "DÉTECTÉ", "PAS DE DÉBIT") + "]  |  F2 [" + formatState(flow_2, "DÉTECTÉ", "PAS DE DÉBIT") + "]");
-    debugPrintln("  Securites    : Fusible [" + formatState(!bypass_fuse, "ACTIVE", "CONTOURNEE") + "]  |  Debit [" + formatState(!bypass_flow, "ACTIVE", "CONTOURNEE") + "]");
-    
+    debugPrintln("  Bubbles (Jet): [" + formatState(jet_enabled, "ON", "OFF") + "]");
+    debugPrintln("  Heating      : [" + formatState(heating_enabled, "HEATING", "OFF") + "]");
+    debugPrintln("  Water Sensor : F1 [" + formatState(flow_1, "DETECTED", "NO FLOW") + "]  |  F2 [" + formatState(flow_2, "DETECTED", "NO FLOW") + "]");
+    debugPrintln("  Interlocks   : Fuse [" + formatState(!bypass_fuse, "ACTIVE", "BYPASSED") + "]  |  Flow [" + formatState(!bypass_flow, "ACTIVE", "BYPASSED") + "]");
+
     debugPrintln(String(C_CYAN) + "---------------------------------------------------" + C_RESET);
-    debugPrintln("  Minuteur     : " + String(elMins) + "m " + String(elSecs) + "s ecoules");
-    debugPrintln("  Verrou cycle : " + strLock);
+    debugPrintln("  Timer        : " + String(elMins) + "m " + String(elSecs) + "s elapsed");
+    debugPrintln("  Cycle lock   : " + strLock);
     debugPrintln("  Diagnostic   : " + strDiag);
     debugPrintln(String(C_CYAN) + "===================================================" + C_RESET);
   }
 
-  esp_task_wdt_reset(); 
+  esp_task_wdt_reset();
 }
 
 // ==========================================
-// AUTO-DECOUVERTE MQTT (HOME ASSISTANT)
+// MQTT AUTO-DISCOVERY (HOME ASSISTANT)
 // ==========================================
 void publishMQTTDiscovery() {
-  debugPrintln(String(C_CYAN) + "Envoi de l'Auto-Decouverte MQTT..." + C_RESET);
+  debugPrintln(String(C_CYAN) + "Sending MQTT auto-discovery..." + C_RESET);
 
   String deviceStr = "\"dev\":{\"ids\":[\"spa_intex_esp32\"],\"name\":\"Spa Intex\",\"mdl\":\"DIY ESP32\",\"mf\":\"Custom\"}";
 
-  // 1. Capteur de Temperature
+  // 1. Temperature sensor
   String topicTemp = "homeassistant/sensor/spa_intex/temperature/config";
   String payloadTemp = "{\"name\":\"Spa Temperature\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ value_json.temp_2 }}\",\"unit_of_meas\":\"°C\",\"dev_cla\":\"temperature\",\"stat_cla\":\"measurement\",\"uniq_id\":\"spa_temp\"," + deviceStr + "}";
-  MQTTclient.publish(topicTemp.c_str(), payloadTemp.c_str(), true); 
+  MQTTclient.publish(topicTemp.c_str(), payloadTemp.c_str(), true);
 
-  // 2. Reglage de la Temperature Cible
+  // 2. Target temperature setpoint
   String topicTarget = "homeassistant/number/spa_intex/target/config";
-  String payloadTarget = "{\"name\":\"Spa Cible\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ value_json.target }}\",\"cmd_t\":\"spa_intex/target\",\"min\":20,\"max\":40,\"step\":1,\"unit_of_meas\":\"°C\",\"uniq_id\":\"spa_target\"," + deviceStr + "}";
+  String payloadTarget = "{\"name\":\"Spa Target\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ value_json.target }}\",\"cmd_t\":\"spa_intex/target\",\"min\":20,\"max\":40,\"step\":1,\"unit_of_meas\":\"°C\",\"uniq_id\":\"spa_target\"," + deviceStr + "}";
   MQTTclient.publish(topicTarget.c_str(), payloadTarget.c_str(), true);
 
-  // 3. Interrupteur Thermostat
+  // 3. Thermostat switch
   String topicTherm = "homeassistant/switch/spa_intex/thermostat/config";
   String payloadTherm = "{\"name\":\"Spa Thermostat\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.thermostat else '0' }}\",\"cmd_t\":\"spa_intex/thermostat\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"uniq_id\":\"spa_therm\"," + deviceStr + "}";
   MQTTclient.publish(topicTherm.c_str(), payloadTherm.c_str(), true);
 
-  // 4. Interrupteur Filtration
+  // 4. Filtration switch
   String topicFilt = "homeassistant/switch/spa_intex/filtration/config";
   String payloadFilt = "{\"name\":\"Spa Filtration\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.filtration else '0' }}\",\"cmd_t\":\"spa_intex/filtration\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"uniq_id\":\"spa_filt\"," + deviceStr + "}";
   MQTTclient.publish(topicFilt.c_str(), payloadFilt.c_str(), true);
 
-  // 5. Interrupteur Bulles (Jet)
+  // 5. Bubbles (Jet) switch
   String topicJet = "homeassistant/switch/spa_intex/jet/config";
-  String payloadJet = "{\"name\":\"Spa Bulles\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.jet else '0' }}\",\"cmd_t\":\"spa_intex/jet\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"uniq_id\":\"spa_jet\"," + deviceStr + "}";
+  String payloadJet = "{\"name\":\"Spa Bubbles\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.jet else '0' }}\",\"cmd_t\":\"spa_intex/jet\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"uniq_id\":\"spa_jet\"," + deviceStr + "}";
   MQTTclient.publish(topicJet.c_str(), payloadJet.c_str(), true);
 
-  // 6. Bypass securite debit d'eau (categorie configuration)
+  // 6. Water-flow interlock bypass (configuration category)
   String topicBpFlow = "homeassistant/switch/spa_intex/bypass_flow/config";
-  String payloadBpFlow = "{\"name\":\"Spa Bypass Debit\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.bypass_flow else '0' }}\",\"cmd_t\":\"spa_intex/bypass_flow\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"ent_cat\":\"config\",\"uniq_id\":\"spa_bypass_flow\"," + deviceStr + "}";
+  String payloadBpFlow = "{\"name\":\"Spa Flow Bypass\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.bypass_flow else '0' }}\",\"cmd_t\":\"spa_intex/bypass_flow\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"ent_cat\":\"config\",\"uniq_id\":\"spa_bypass_flow\"," + deviceStr + "}";
   MQTTclient.publish(topicBpFlow.c_str(), payloadBpFlow.c_str(), true);
 
-  // 7. Bypass securite fusible thermique (categorie configuration)
+  // 7. Thermal-fuse interlock bypass (configuration category)
   String topicBpFuse = "homeassistant/switch/spa_intex/bypass_fuse/config";
-  String payloadBpFuse = "{\"name\":\"Spa Bypass Fusible\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.bypass_fuse else '0' }}\",\"cmd_t\":\"spa_intex/bypass_fuse\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"ent_cat\":\"config\",\"uniq_id\":\"spa_bypass_fuse\"," + deviceStr + "}";
+  String payloadBpFuse = "{\"name\":\"Spa Fuse Bypass\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.bypass_fuse else '0' }}\",\"cmd_t\":\"spa_intex/bypass_fuse\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"ent_cat\":\"config\",\"uniq_id\":\"spa_bypass_fuse\"," + deviceStr + "}";
   MQTTclient.publish(topicBpFuse.c_str(), payloadBpFuse.c_str(), true);
 
-  debugPrintln(String(C_GREEN) + "Auto-Decouverte MQTT envoyee avec succes !" + C_RESET);
+  debugPrintln(String(C_GREEN) + "MQTT auto-discovery sent successfully!" + C_RESET);
 }
 
 // ==========================================
-// MQTT LOGIQUE
+// MQTT LOGIC
 // ==========================================
 void connect_mqtt() {
   if (strlen(mqttServer) == 0) return;
 
   MQTTclient.setServer(mqttServer, mqttPort);
   MQTTclient.setCallback(mqttcallback);
-  
+
   MQTTclient.setBufferSize(1024);
- 
+
   if (!MQTTclient.connected()) {
-    debugPrint("Tentative de connexion MQTT : ");
+    debugPrint("Attempting MQTT connection: ");
     debugPrintln(mqttServer);
- 
+
     if (MQTTclient.connect("IntexSpaClient", mqttUser, mqttPass)) {
-      debugPrintln(String(C_GREEN) + "Connecte au broker MQTT" + C_RESET);
-      
+      debugPrintln(String(C_GREEN) + "Connected to MQTT broker" + C_RESET);
+
       publishMQTTDiscovery();
-      
+
       MQTTclient.subscribe(mqttTopicJet);
       MQTTclient.subscribe(mqttTopicFiltration);
       MQTTclient.subscribe(mqttTopicTarget);
@@ -451,10 +451,10 @@ void connect_mqtt() {
       MQTTclient.subscribe(mqttTopicBypassFlow);
       MQTTclient.subscribe(mqttTopicBypassFuse);
     } else {
-      debugPrint(String(C_RED) + "Erreur : Code etat MQTT = " + C_RESET);
+      debugPrint(String(C_RED) + "Error: MQTT state code = " + C_RESET);
       debugPrintln(MQTTclient.state());
     }
-  }  
+  }
 }
 
 void mqttcallback(char* topic, byte* payload, unsigned int length) {
@@ -473,8 +473,8 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
   }
   else if(strcmp(topic, mqttTopicHeaterForce) == 0) {
     if(message == "1" && (flow_1 || bypass_flow) && (fuse || bypass_fuse)) {
-      // On amorce la resistance 1 ; la resistance 2 est geree par activate_heating
-      // (decalage de demarrage + exclusion avec les bulles)
+      // Start heater 1; heater 2 is handled by activate_heating
+      // (startup stagger + exclusion with the bubbles/jet)
       digitalWrite(HEATER_1_PIN, HIGH);
       heating_enabled = true;
       heater1OnTime = millis();
@@ -499,7 +499,7 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
   }
   else if(strcmp(topic, mqttTopicReset) == 0) {
     if(message == "1") {
-      debugPrintln(String(C_YELLOW) + "Redemarrage demande via MQTT. Execution dans 10 secondes..." + C_RESET);
+      debugPrintln(String(C_YELLOW) + "Reboot requested via MQTT. Executing in 10 seconds..." + C_RESET);
       resetRequested = true;
       resetTimer = millis();
     }
@@ -515,65 +515,65 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
   }
   else if(strcmp(topic, mqttTopicBypassFlow) == 0) {
     bypass_flow = (message == "1");
-    if(bypass_flow) debugPrintln(String(C_RED) + "ATTENTION : securite DEBIT D'EAU contournee !" + C_RESET);
+    if(bypass_flow) debugPrintln(String(C_RED) + "WARNING: WATER FLOW interlock bypassed!" + C_RESET);
     request_mqtt_update = true;
   }
   else if(strcmp(topic, mqttTopicBypassFuse) == 0) {
     bypass_fuse = (message == "1");
-    if(bypass_fuse) debugPrintln(String(C_RED) + "ATTENTION : securite FUSIBLE THERMIQUE contournee !" + C_RESET);
+    if(bypass_fuse) debugPrintln(String(C_RED) + "WARNING: THERMAL FUSE interlock bypassed!" + C_RESET);
     request_mqtt_update = true;
   }
 }
 
 // ==========================================
-// METHODES AUXILIAIRES
+// HELPER METHODS
 // ==========================================
 void test_relay() {
-  debugPrintln("Auto-test des relais...");
+  debugPrintln("Relay self-test...");
   digitalWrite(HEATER_1_PIN, HIGH); delay(200); digitalWrite(HEATER_1_PIN, LOW); delay(200);
   digitalWrite(HEATER_2_PIN, HIGH); delay(200); digitalWrite(HEATER_2_PIN, LOW); delay(200);
   digitalWrite(JET_PIN, HIGH);      delay(200); digitalWrite(JET_PIN, LOW);      delay(200);
   digitalWrite(PUMP_PIN, HIGH);     delay(200); digitalWrite(PUMP_PIN, LOW);     delay(200);
-  debugPrintln(String(C_GREEN) + "Fin de l'auto-test." + C_RESET);
+  debugPrintln(String(C_GREEN) + "Self-test finished." + C_RESET);
 }
 
 void activateOTA() {
   ArduinoOTA
     .onStart([]() {
-      esp_task_wdt_delete(NULL); 
-      
+      esp_task_wdt_delete(NULL);
+
       if (telnetClient) {
-        telnetClient.println(String(C_YELLOW) + "Mise a jour OTA detectee. Deconnexion Telnet imminente..." + C_RESET);
+        telnetClient.println(String(C_YELLOW) + "OTA update detected. Telnet disconnect imminent..." + C_RESET);
         delay(100);
-        telnetClient.stop(); 
+        telnetClient.stop();
       }
-      
+
       String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
-      Serial.println("Debut mise a jour OTA : " + type);
+      Serial.println("Starting OTA update: " + type);
     })
     .onEnd([]() {
-      Serial.println("\nFin mise a jour OTA");
+      Serial.println("\nOTA update finished");
     })
     .onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progression : %u%%\r", (progress / (total / 100)));
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
     })
     .onError([](ota_error_t error) {
-      Serial.printf("Erreur OTA [%u]: ", error);
+      Serial.printf("OTA error [%u]: ", error);
     });
 
   ArduinoOTA.setHostname("spa-intex");
   if(strlen(otaPass) > 0) {
     ArduinoOTA.setPassword(otaPass);
   } else {
-    debugPrintln(String(C_RED) + "ATTENTION : OTA non protege (aucun mot de passe configure) !" + C_RESET);
+    debugPrintln(String(C_RED) + "WARNING: OTA unprotected (no password configured)!" + C_RESET);
   }
 
   ArduinoOTA.begin();
 }
 
 void read_sensors() {
-  fuse = (digitalRead(TEMP_FUSE_PIN) == FUSE_OK_LEVEL); // true = fusible intact (securite OK)
-  
+  fuse = (digitalRead(TEMP_FUSE_PIN) == FUSE_OK_LEVEL); // true = fuse intact (interlock OK)
+
   float raw_temp_1 = read_temperature(TEMP_1_PIN, SERIESRESISTOR_TEMP_1);
   float raw_temp_2 = read_temperature(TEMP_2_PIN, SERIESRESISTOR_TEMP_2);
 
@@ -586,11 +586,11 @@ void read_sensors() {
     temp_2 = (temp_2 * (1.0 - smoothing_factor)) + (raw_temp_2 * smoothing_factor);
   }
 
-  current_temp = temp_2; 
+  current_temp = temp_2;
 
   bool new_flow_1 = (digitalRead(FLOW_1_PIN) == FLOW_ACTIVE_LEVEL);
   bool new_flow_2 = (digitalRead(FLOW_2_PIN) == FLOW_ACTIVE_LEVEL);
-  
+
   if((new_flow_1 != flow_1) || (new_flow_2 != flow_2)) {
     request_mqtt_update = true;
   }
@@ -601,15 +601,15 @@ void read_sensors() {
 
 float read_temperature(int pin, int R1) {
   long sum = 0;
-  
+
   for(int i = 0; i < num_samples; i++) {
     sum += analogRead(pin);
-    delayMicroseconds(100); 
+    delayMicroseconds(100);
   }
-  
+
   float mes = (float)sum / num_samples;
-  if (mes <= 0.0) return 0.0; 
-  
+  if (mes <= 0.0) return 0.0;
+
   float R2 = R1 * (4095.0 / mes - 1.0);
   float T = exp((R2 - 28589.0) / -7750.0);
   return T;
@@ -633,12 +633,12 @@ void activate_heating(bool state) {
   if(state && (flow_1 || bypass_flow) && (fuse || bypass_fuse)) {
     if(!heating_enabled) {
       request_mqtt_update = true;
-      heater1OnTime = heartbeat; // demarrage du minuteur de decalage
+      heater1OnTime = heartbeat; // start the stagger timer
     }
     heating_enabled = true;
     digitalWrite(HEATER_1_PIN, HIGH);
 
-    // Resistance 2 : seulement apres le decalage de demarrage ET jamais en meme temps que les bulles
+    // Heater 2: only after the startup stagger AND never at the same time as the bubbles/jet
     bool heater2Allowed = (heartbeat - heater1OnTime >= heaterStageDelay) && !jet_enabled;
     digitalWrite(HEATER_2_PIN, heater2Allowed ? HIGH : LOW);
   } else {
@@ -652,7 +652,7 @@ void activate_heating(bool state) {
 bool must_heat() {
   if(!temp_regulation_enabled || (!flow_1 && !bypass_flow) || (!fuse && !bypass_fuse) || current_temp >= max_temp) {
     if(heating_enabled) {
-       lastHeatingStateChange = heartbeat; 
+       lastHeatingStateChange = heartbeat;
     }
     return false;
   }
@@ -668,8 +668,8 @@ bool must_heat() {
 
   if(desired_state != heating_enabled) {
     if(isFirstCycle || (heartbeat - lastHeatingStateChange >= minHeatingCycle)) {
-      lastHeatingStateChange = heartbeat; 
-      isFirstCycle = false; 
+      lastHeatingStateChange = heartbeat;
+      isFirstCycle = false;
       return desired_state;
     } else {
       return heating_enabled;
@@ -683,11 +683,11 @@ void update_mqtt_server() {
   JSONVar myData;
   myData["flow_1"] = (bool) flow_1;
   myData["flow_2"] = (bool) flow_2;
-  
+
   myData["temp_1"] = round(temp_1 * 10.0) / 10.0;
   myData["temp_2"] = round(temp_2 * 10.0) / 10.0;
   myData["target"] = round(target_temp * 10.0) / 10.0;
-  
+
   myData["heartbeat"] = (unsigned long) heartbeat;
   myData["thermostat"] = (bool) temp_regulation_enabled;
   myData["filtration"] = (bool) filtration_enabled;
@@ -705,10 +705,10 @@ void sendStringValueOverMQTT(String value, String topic) {
   if(mqtt_enable) {
     char valueChar[value.length() + 1];
     value.toCharArray(valueChar, value.length() + 1);
-  
+
     char topicChar[topic.length() + 1];
     topic.toCharArray(topicChar, topic.length() + 1);
-    
+
     MQTTclient.publish(topicChar, valueChar);
   }
 }

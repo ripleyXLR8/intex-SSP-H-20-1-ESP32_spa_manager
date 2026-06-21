@@ -48,6 +48,6 @@ Command/state topics are under `spa_intex/` (e.g. `spa_intex/target`, `/thermost
 Heaters 18/19, Jet 5, Pump 17, Flow 23/22, Temp ADC 34/35, Temp-fuse 32. Eagle schematic/board files are in `eagle_files/`; annotated reverse-engineering photos and the temp-resistance curve are in `images/`.
 
 ## Conventions
-- Comments and serial/log strings are in **French**; match that when editing existing strings.
+- Comments and serial/log strings are in **English** (the sketch was fully translated from French); keep new strings English. Note: MQTT topic strings, JSON keys, and HA `uniq_id`s are protocol identifiers — never translate those.
 - Use the `debugPrint*` helpers and `C_*` ANSI macros for any new logging.
 - Keep `loop()` non-blocking — avoid `delay()` in the main path (short `delay()`s exist only in `setup()`/relay test/heater staging) so the watchdog isn't tripped.
