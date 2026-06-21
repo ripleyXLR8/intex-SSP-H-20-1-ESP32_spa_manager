@@ -26,7 +26,7 @@ Classic Arduino `setup()` / non-blocking `loop()`. `loop()` is gated by `millis(
 - `read_sensors()` every 500 ms — reads thermistors and (currently stubbed) flow sensors.
 - `update_relay_state()` every loop — the actuator authority. Calls `activate_jet`, `activate_filtration`, and `activate_heating(must_heat())`.
 - `update_mqtt_server()` every 20 s (or when `request_mqtt_update` is set) — publishes full state JSON to `spa_intex/info`.
-- An **esp_task_wdt** (8 s) reboots the board if the loop stalls; `esp_task_wdt_reset()` is called at the end of every loop, and OTA start removes the WDT so flashing doesn't trip it.
+- An **esp_task_wdt** (8 s) reboots the board if the loop stalls; `esp_task_wdt_reset()` is called at the end of every loop, and OTA start removes the WDT so flashing doesn't trip it. `connect_mqtt()` sets `MQTTclient.setSocketTimeout(4)` so a blocking connect to an unreachable broker stays under the WDT — keep any blocking call in the loop path under 8 s.
 
 State lives in module-level globals (`current_temp`, `target_temp`, `heating_enabled`, `temp_regulation_enabled`, `filtration_enabled`, `jet_enabled`, `flow_1/2`, etc.). MQTT callbacks set these; `update_relay_state()` acts on them. Keep that direction — commands mutate state flags, the loop translates flags to pins.
 

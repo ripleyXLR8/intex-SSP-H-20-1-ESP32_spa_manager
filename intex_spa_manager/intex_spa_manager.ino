@@ -431,6 +431,9 @@ void connect_mqtt() {
   MQTTclient.setCallback(mqttcallback);
 
   MQTTclient.setBufferSize(1024);
+  // Bound the blocking connect() (CONNACK wait) below the 8s watchdog so an
+  // unreachable broker cannot stall loop() long enough to trigger a reboot.
+  MQTTclient.setSocketTimeout(4);
 
   if (!MQTTclient.connected()) {
     debugPrint("Attempting MQTT connection: ");
