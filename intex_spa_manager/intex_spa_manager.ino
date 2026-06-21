@@ -390,7 +390,7 @@ void publishMQTTDiscovery() {
 
   // 2. Target temperature setpoint
   String topicTarget = "homeassistant/number/spa_intex/target/config";
-  String payloadTarget = "{\"name\":\"Spa Target\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ value_json.target }}\",\"cmd_t\":\"spa_intex/target\",\"min\":20,\"max\":40,\"step\":1,\"unit_of_meas\":\"°C\",\"uniq_id\":\"spa_target\"," + deviceStr + "}";
+  String payloadTarget = "{\"name\":\"Spa Target\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ value_json.target }}\",\"cmd_t\":\"spa_intex/target\",\"min\":20,\"max\":39,\"step\":1,\"unit_of_meas\":\"°C\",\"uniq_id\":\"spa_target\"," + deviceStr + "}";
   MQTTclient.publish(topicTarget.c_str(), payloadTarget.c_str(), true);
 
   // 3. Thermostat switch
