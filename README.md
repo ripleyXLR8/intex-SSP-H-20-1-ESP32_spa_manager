@@ -147,14 +147,14 @@ In that payload `fuse:true` means the thermal fuse reads intact (safe to heat) a
 
 Command topics (publish `1` or `0`, or a number for the target) :
 - `spa_intex/target` -> set the target temperature (°C, capped at 39 °C).
-- `spa_intex/thermostat` -> enable/disable the temperature regulation (enabling it also turns filtration on).
+- `spa_intex/thermostat` -> enable/disable the temperature regulation (enabling it also turns filtration on). Accepts `1`/`0` or `heat`/`off`.
 - `spa_intex/filtration` -> enable/disable the filtration (water pump).
 - `spa_intex/jet` -> enable/disable the jet (air pump / bubbles).
 - `spa_intex/reset` -> publish `1` to reboot the board after a 10 s delay.
 - `spa_intex/bypass_flow` -> override the water-flow interlock (see safety section below).
 - `spa_intex/bypass_fuse` -> override the thermal-fuse interlock (see safety section below).
 
-On every successful MQTT connection the board also publishes **Home Assistant MQTT auto-discovery** messages (under the `homeassistant/...` topics), so the temperature sensor, target setpoint, thermostat, filtration and jet appear automatically as a "Spa Intex" device in Home Assistant — no manual entity configuration required.
+On every successful MQTT connection the board also publishes **Home Assistant MQTT auto-discovery** messages (under the `homeassistant/...` topics), so the device appears automatically as "Spa Intex" in Home Assistant — no manual entity configuration required. The thermostat is exposed as a single **`climate`** entity (current temperature, target slider, off/heat mode and a heating/idle indicator); the filtration and jet are switches, and the two interlock overrides are switches in the *Configuration* section. (The thermostat + setpoint were previously two separate switch/number entities — these are now removed in favour of the climate card.)
 
 ### d) Safety interlocks and current limiting
 The heating logic enforces several hardware-protection rules. The heater stays off unless **all** of these hold:

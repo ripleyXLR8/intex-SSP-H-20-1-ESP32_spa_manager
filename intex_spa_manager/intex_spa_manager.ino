@@ -424,15 +424,15 @@ void publishMQTTDiscovery() {
   String payloadTemp = "{\"name\":\"Spa Temperature\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ value_json.temp_2 }}\",\"unit_of_meas\":\"°C\",\"dev_cla\":\"temperature\",\"stat_cla\":\"measurement\",\"uniq_id\":\"spa_temp\"," + deviceStr + "}";
   MQTTclient.publish(topicTemp.c_str(), payloadTemp.c_str(), true);
 
-  // 2. Target temperature setpoint
-  String topicTarget = "homeassistant/number/spa_intex/target/config";
-  String payloadTarget = "{\"name\":\"Spa Target\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ value_json.target }}\",\"cmd_t\":\"spa_intex/target\",\"min\":20,\"max\":39,\"step\":1,\"unit_of_meas\":\"°C\",\"uniq_id\":\"spa_target\"," + deviceStr + "}";
-  MQTTclient.publish(topicTarget.c_str(), payloadTarget.c_str(), true);
+  // 2. Thermostat as a single climate entity (replaces the old number + switch below).
+  //    Reuses the existing spa_intex/target and spa_intex/thermostat command topics.
+  String topicClimate = "homeassistant/climate/spa_intex/thermostat/config";
+  String payloadClimate = "{\"name\":\"Spa\",\"modes\":[\"off\",\"heat\"],\"mode_cmd_t\":\"spa_intex/thermostat\",\"mode_stat_t\":\"spa_intex/info\",\"mode_stat_tpl\":\"{{ 'heat' if value_json.thermostat else 'off' }}\",\"temp_cmd_t\":\"spa_intex/target\",\"temp_stat_t\":\"spa_intex/info\",\"temp_stat_tpl\":\"{{ value_json.target }}\",\"curr_temp_t\":\"spa_intex/info\",\"curr_temp_tpl\":\"{{ value_json.temp_2 }}\",\"act_t\":\"spa_intex/info\",\"act_tpl\":\"{{ 'heating' if value_json.heater else ('idle' if value_json.thermostat else 'off') }}\",\"min_temp\":20,\"max_temp\":39,\"temp_step\":1,\"temp_unit\":\"C\",\"uniq_id\":\"spa_climate\"," + deviceStr + "}";
+  MQTTclient.publish(topicClimate.c_str(), payloadClimate.c_str(), true);
 
-  // 3. Thermostat switch
-  String topicTherm = "homeassistant/switch/spa_intex/thermostat/config";
-  String payloadTherm = "{\"name\":\"Spa Thermostat\",\"stat_t\":\"spa_intex/info\",\"val_tpl\":\"{{ '1' if value_json.thermostat else '0' }}\",\"cmd_t\":\"spa_intex/thermostat\",\"pl_on\":\"1\",\"pl_off\":\"0\",\"uniq_id\":\"spa_therm\"," + deviceStr + "}";
-  MQTTclient.publish(topicTherm.c_str(), payloadTherm.c_str(), true);
+  // 3. Remove the legacy number + switch entities (clear their retained discovery).
+  MQTTclient.publish("homeassistant/number/spa_intex/target/config", "", true);
+  MQTTclient.publish("homeassistant/switch/spa_intex/thermostat/config", "", true);
 
   // 4. Filtration switch
   String topicFilt = "homeassistant/switch/spa_intex/filtration/config";
@@ -466,7 +466,7 @@ void connect_mqtt() {
   MQTTclient.setServer(mqttServer, mqttPort);
   MQTTclient.setCallback(mqttcallback);
 
-  MQTTclient.setBufferSize(1024);
+  MQTTclient.setBufferSize(2048); // headroom for the larger climate discovery payload
   // Bound the blocking connect() (CONNACK wait) below the 8s watchdog so an
   // unreachable broker cannot stall loop() long enough to trigger a reboot.
   MQTTclient.setSocketTimeout(4);
@@ -524,7 +524,8 @@ void mqttcallback(char* topic, byte* payload, unsigned int length) {
     }
   }
   else if(strcmp(topic, mqttTopicTempRegulation) == 0) {
-    if(message == "1") {
+    // Accepts "1"/"0" (switch) or "heat"/"off" (HA climate mode).
+    if(message == "1" || message == "heat") {
       temp_regulation_enabled = true;
       filtration_enabled = true;
     } else {
